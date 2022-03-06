@@ -2,7 +2,11 @@
 name = "vmdl"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+exclude = ["data"]
 
 [dependencies]
+arrayvec = "0.7.2"
+binrw = "0.8.0"
+thiserror = "1.0.30"
+static_assertions = "1.1.0"
+bitflags = "1.0.4"
