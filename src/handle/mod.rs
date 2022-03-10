@@ -1,9 +1,9 @@
-use crate::Mdl;
+use crate::mdl::Mdl;
 use std::ops::Deref;
 
-/// A handle represents a data structure in the mdl file and the mdl file containing it.
+/// A handle represents a mdl structure in the mdl file and the mdl file containing it.
 ///
-/// Keeping a reference of the mdl file with the data is required since a lot of data types
+/// Keeping a reference of the mdl file with the mdl is required since a lot of mdl types
 /// reference parts from other structures in the mdl file
 #[derive(Debug)]
 pub struct Handle<'a, T> {

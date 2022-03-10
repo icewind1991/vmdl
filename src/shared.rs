@@ -1,14 +1,6 @@
-mod bone;
-mod header;
-mod header2;
-
-pub use bone::*;
-pub use header::*;
-pub use header2::*;
-
-use crate::error::StringError;
+use crate::{BinRead, StringError};
 use arrayvec::ArrayString;
-use binrw::{BinRead, BinResult, ReadOptions};
+use binrw::{BinResult, ReadOptions};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 

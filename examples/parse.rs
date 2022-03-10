@@ -1,10 +1,14 @@
-fn main() -> Result<(), vmdl::MdlError> {
-    let mut args = std::env::args();
-    let _ = args.next();
-    let data = std::fs::read(args.next().expect("No demo file provided"))?;
-    let mdl = vmdl::Mdl::read(&data)?;
+use std::env::args;
+use std::fs;
+use vmdl::mdl::Mdl;
 
-    dbg!(mdl.bones);
+fn main() -> Result<(), vmdl::ModelError> {
+    let mut args = args();
+    let _ = args.next();
+    let data = fs::read(args.next().expect("No demo file provided"))?;
+    let mdl = Mdl::read(&data)?;
+
+    dbg!(mdl.header);
 
     Ok(())
 }

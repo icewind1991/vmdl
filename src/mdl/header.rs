@@ -1,4 +1,5 @@
-use crate::{Bone, FixedString, Vector};
+use crate::mdl::Bone;
+use crate::{index_range, FixedString, Vector};
 use binrw::BinRead;
 use std::mem::size_of;
 
@@ -33,8 +34,8 @@ pub struct StudioHeader {
      * Note that indexes/counts are not always paired and ordered consistently.
      */
     // mstudiobone_t
-    bone_count: i32,  // Number of data sections (of type mstudiobone_t)
-    bone_offset: i32, // Offset of first data section
+    bone_count: i32,  // Number of mdl sections (of type mstudiobone_t)
+    bone_offset: i32, // Offset of first mdl section
 
     // mstudiobonecontroller_t
     bone_controller_count: i32,
@@ -121,7 +122,7 @@ pub struct StudioHeader {
     pub surface_prop_index: i32,
 
     // Unusual: In this one index comes first, then count.
-    // Key-value data is a series of strings. If you can't find
+    // Key-value mdl is a series of strings. If you can't find
     // what you're interested in, check the associated PHY file as well.
     key_value_index: i32,
     key_value_count: i32,
@@ -284,12 +285,6 @@ impl StudioHeader {
             1,
         )
     }
-}
-
-fn index_range(index: i32, count: i32, size: usize) -> impl Iterator<Item = usize> {
-    (0..count as usize)
-        .map(move |i| i * size)
-        .map(move |i| index as usize + i)
 }
 
 static_assertions::const_assert_eq!(size_of::<StudioHeader>() - size_of::<FixedString<0>>(), 408);
