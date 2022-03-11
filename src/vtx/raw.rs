@@ -123,7 +123,7 @@ impl StripGroupHeader {
     }
 
     pub fn index_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.index_offset, self.index_count, size_of::<Vertex>())
+        index_range(self.index_offset, self.index_count, size_of::<u16>())
     }
 
     pub fn strip_indexes(&self) -> impl Iterator<Item = usize> {

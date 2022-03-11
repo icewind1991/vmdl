@@ -10,3 +10,7 @@ binrw = "0.8.0"
 thiserror = "1.0.30"
 static_assertions = "1.1.0"
 bitflags = "1.0.4"
+
+[dev-dependencies]
+three-d = "0.10.2"
+miette = { version = "4.2.1", features = ["fancy"] }

@@ -2,6 +2,7 @@ use std::fs::read;
 use vmdl::mdl::Mdl;
 use vmdl::vtx::Vtx;
 use vmdl::vvd::Vvd;
+use vmdl::Model;
 
 #[test]
 fn parse_mdl() {

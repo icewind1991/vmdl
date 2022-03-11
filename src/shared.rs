@@ -11,6 +11,12 @@ pub struct Vector {
     pub z: f32,
 }
 
+impl Vector {
+    pub fn iter(&self) -> impl Iterator<Item = f32> {
+        [self.x, self.y, self.z].into_iter()
+    }
+}
+
 impl From<Vector> for [f32; 3] {
     fn from(vector: Vector) -> Self {
         [vector.x, vector.y, vector.z]

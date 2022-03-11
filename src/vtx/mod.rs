@@ -142,6 +142,7 @@ impl Mesh {
 pub struct StripGroup {
     // todo vertex indexes
     // todo topologies
+    pub indices: Vec<u16>,
     pub vertices: Vec<Vertex>,
     pub strips: Vec<Strip>,
     pub flags: StripGroupFlags,
@@ -171,6 +172,17 @@ impl StripGroup {
                     let mut reader = Cursor::new(data);
                     let header = reader.read_le()?;
                     Strip::read(data, header)
+                })
+                .collect::<Result<_>>()?,
+            indices: header
+                .index_indexes()
+                .map(|index| {
+                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
+                        data: "VertexIndex",
+                        offset: index,
+                    })?;
+                    let mut reader = Cursor::new(data);
+                    Ok(reader.read_le()?)
                 })
                 .collect::<Result<_>>()?,
             flags: header.flags,
