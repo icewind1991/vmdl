@@ -119,7 +119,7 @@ impl StripGroupHeader {
         index_range(
             self.vertex_offset,
             self.vertex_count,
-            size_of::<u16>(), // Vertex index from .VVD's vertex array
+            size_of::<Vertex>(), // Vertex index from .VVD's vertex array
         )
     }
 

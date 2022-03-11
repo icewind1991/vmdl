@@ -3,6 +3,7 @@ use arrayvec::ArrayString;
 use binrw::{BinResult, ReadOptions};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::ops::Add;
 
 #[derive(Debug, Clone, Copy, BinRead)]
 pub struct Vector {
@@ -36,6 +37,18 @@ impl From<[f32; 3]> for Vector {
 impl From<&Vector> for [f32; 3] {
     fn from(vector: &Vector) -> Self {
         [vector.x, vector.y, vector.z]
+    }
+}
+
+impl Add<Vector> for Vector {
+    type Output = Vector;
+
+    fn add(self, rhs: Vector) -> Self::Output {
+        Vector {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
     }
 }
 

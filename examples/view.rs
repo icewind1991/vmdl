@@ -6,7 +6,7 @@ use three_d::*;
 use vmdl::mdl::Mdl;
 use vmdl::vtx::Vtx;
 use vmdl::vvd::Vvd;
-use vmdl::Model;
+use vmdl::{Model, Vector};
 
 #[derive(Debug, Error)]
 enum Error {
@@ -62,7 +62,7 @@ fn main() -> Result<(), Error> {
     };
 
     let mut model = three_d::Model::new_with_material(&context, &cpu_mesh, material)?;
-    model.set_transformation(Mat4::from_angle_x(degrees(90.0)));
+    model.set_transformation(Mat4::from_angle_x(degrees(-90.0)));
 
     let mut lights = Lights {
         ambient: Some(AmbientLight {
@@ -71,8 +71,8 @@ fn main() -> Result<(), Error> {
             ..Default::default()
         }),
         directional: vec![
-            DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(0.0, -1.0, 0.0))?,
-            DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(0.0, 1.0, 0.0))?,
+            DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(1.0, -1.0, 0.0))?,
+            DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(1.0, 1.0, 0.0))?,
         ],
         ..Default::default()
     };
@@ -224,10 +224,26 @@ fn load(path: &Path) -> Result<Model, vmdl::ModelError> {
 const UNIT_SCALE: f32 = 1.0 / (1.905 * 100.0);
 
 fn model_to_mesh(model: &Model) -> CPUMesh {
+    let offset = model
+        .vertices()
+        .iter()
+        .map(|vert| vert.position.z)
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let offset = Vector {
+        x: 0.0,
+        y: 0.0,
+        z: -offset / 2.0,
+    };
+
     let positions: Vec<f32> = model
         .vertices()
         .iter()
-        .flat_map(|vertex| vertex.position.iter().map(|pos| pos * UNIT_SCALE * 10.0))
+        .flat_map(|vertex| {
+            (vertex.position + offset)
+                .iter()
+                .map(|pos| pos * UNIT_SCALE * 10.0)
+        })
         .collect();
     let normals: Vec<f32> = model
         .vertices()

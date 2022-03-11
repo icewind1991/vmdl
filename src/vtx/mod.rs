@@ -214,6 +214,7 @@ impl Strip {
 
     pub fn indices(&self) -> impl Iterator<Item = [usize; 3]> + 'static {
         if self.flags.contains(StripFlags::IS_TRI_STRIP) {
+            dbg!("strip");
             let offset = self.indices.start;
             Either::Left((0..self.indices.len()).map(move |i| {
                 let cw = i & 1;
