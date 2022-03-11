@@ -7,7 +7,7 @@ use std::ops::Deref;
 /// reference parts from other structures in the mdl file
 #[derive(Debug)]
 pub struct Handle<'a, T> {
-    mdl: &'a Mdl,
+    _mdl: &'a Mdl,
     data: &'a T,
 }
 

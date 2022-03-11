@@ -7,7 +7,7 @@ pub mod vvd;
 
 use crate::mdl::Mdl;
 use crate::vtx::Vtx;
-use crate::vvd::Vvd;
+use crate::vvd::{Vertex, Vvd};
 use binrw::{BinRead, BinReaderExt};
 pub use error::*;
 pub use handle::Handle;
@@ -16,6 +16,7 @@ use std::any::type_name;
 use std::io::Cursor;
 
 pub struct Model {
+    #[allow(dead_code)]
     mdl: Mdl,
     vtx: Vtx,
     vvd: Vvd,
@@ -26,7 +27,16 @@ impl Model {
         Model { mdl, vtx, vvd }
     }
 
-    pub fn vertex_strips(&self) -> impl Iterator<Item = impl Iterator<Item = Vector> + '_> {
+    pub fn vertex_strips(&self) -> impl Iterator<Item = impl Iterator<Item = &'_ Vertex> + '_> {
+        self.vertex_strip_indices()
+            .map(|strip| strip.map(|index| &self.vvd.vertices[index]))
+    }
+
+    pub fn vertices(&self) -> &[Vertex] {
+        &self.vvd.vertices
+    }
+
+    pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
         self.vtx
             .body_parts
             .iter()
@@ -34,11 +44,16 @@ impl Model {
             .flat_map(|model| model.lods.iter().next())
             .flat_map(|lod| lod.meshes.iter())
             .flat_map(|mesh| mesh.strip_groups.iter())
-            .map(|strip_group| {
-                strip_group
-                    .indices
-                    .iter()
-                    .map(|index| self.vvd.vertices[(*index) as usize].position)
+            .flat_map(|strip_group| {
+                let group_indices = &strip_group.indices;
+                let vertices = &strip_group.vertices;
+                strip_group.strips.iter().cloned().map(move |strip| {
+                    strip
+                        .indices()
+                        .flat_map(|i| i)
+                        .map(move |index| group_indices[index] as usize)
+                        .map(move |index| vertices[index].original_mesh_vertex_id as usize)
+                })
             })
     }
 }

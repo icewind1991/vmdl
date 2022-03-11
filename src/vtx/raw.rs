@@ -2,6 +2,7 @@ use crate::index_range;
 use binrw::BinRead;
 use bitflags::bitflags;
 use std::mem::size_of;
+use std::ops::Range;
 
 #[derive(Debug, Clone, BinRead)]
 pub struct VtxHeader {
@@ -169,18 +170,15 @@ bitflags! {
 
 impl StripHeader {
     /// Index into the VVD file vertexes
-    pub fn vertex_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(
-            self.vertex_offset,
-            self.vertex_count,
-            size_of::<u16>(), // Vertex index from .VVD's vertex array
-        )
+    pub fn vertex_indexes(&self) -> Range<usize> {
+        self.vertex_offset as usize..(self.vertex_offset + self.vertex_count) as usize
     }
 
-    pub fn index_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.index_offset, self.index_count, size_of::<Vertex>())
+    pub fn index_indexes(&self) -> Range<usize> {
+        self.index_offset as usize..(self.index_offset + self.index_count) as usize
     }
 
+    #[allow(dead_code)]
     pub fn bone_state_change_indexes(&self) -> impl Iterator<Item = usize> {
         index_range(
             self.bone_state_change_offset,

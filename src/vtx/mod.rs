@@ -2,9 +2,11 @@ mod raw;
 
 use crate::ModelError;
 use binrw::BinReaderExt;
+use itertools::Either;
 use raw::*;
 pub use raw::{MeshFlags, StripFlags, StripGroupFlags, Vertex};
 use std::io::Cursor;
+use std::ops::Range;
 
 pub const MDL_VERSION: i32 = 7;
 
@@ -140,7 +142,6 @@ impl Mesh {
 
 #[derive(Debug, Clone)]
 pub struct StripGroup {
-    // todo vertex indexes
     // todo topologies
     pub indices: Vec<u16>,
     pub vertices: Vec<Vertex>,
@@ -192,27 +193,35 @@ impl StripGroup {
 
 #[derive(Debug, Clone)]
 pub struct Strip {
-    // todo vertex indexes
     // todo bone state changes
-    pub vertices: Vec<Vertex>,
+    vertices: Range<usize>,
     pub flags: StripFlags,
+    indices: Range<usize>,
 }
 
 impl Strip {
-    fn read(data: &[u8], header: StripHeader) -> Result<Self> {
+    fn read(_data: &[u8], header: StripHeader) -> Result<Self> {
         Ok(Strip {
-            vertices: header
-                .vertex_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Vertex",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    reader.read_le().map_err(ModelError::from)
-                })
-                .collect::<Result<_>>()?,
+            vertices: header.vertex_indexes(),
+            indices: header.index_indexes(),
             flags: header.flags,
         })
+    }
+
+    pub fn vertices(&self) -> impl Iterator<Item = usize> + 'static {
+        self.vertices.clone()
+    }
+
+    pub fn indices(&self) -> impl Iterator<Item = [usize; 3]> + 'static {
+        if self.flags.contains(StripFlags::IS_TRI_STRIP) {
+            let offset = self.indices.start;
+            Either::Left((0..self.indices.len()).map(move |i| {
+                let cw = i & 1;
+                let idx = offset + i;
+                [idx, idx + 1 - cw, idx + 2 - cw]
+            }))
+        } else {
+            Either::Right(self.indices.clone().step_by(3).map(|i| [i, i + 1, i + 2]))
+        }
     }
 }

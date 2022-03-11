@@ -1,6 +1,5 @@
 use std::env::args_os;
 use std::fs;
-use std::fs::read;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use three_d::*;
@@ -17,8 +16,6 @@ enum Error {
     Mdl(#[from] vmdl::ModelError),
     #[error(transparent)]
     IO(#[from] std::io::Error),
-    #[error("{0}")]
-    Other(&'static str),
 }
 
 fn main() -> Result<(), Error> {
@@ -32,7 +29,7 @@ fn main() -> Result<(), Error> {
     let window = Window::new(WindowSettings {
         title: path.display().to_string(),
         min_size: (512, 512),
-        max_size: Some((1280, 720)),
+        max_size: Some((1920, 1080)),
         ..Default::default()
     })
     .unwrap();
@@ -53,7 +50,7 @@ fn main() -> Result<(), Error> {
     let mut control = OrbitControl::new(*camera.target(), 1.0, 100.0);
     let mut gui = three_d::GUI::new(&context).unwrap();
 
-    let mut cpu_mesh = model_to_mesh(&model);
+    let cpu_mesh = model_to_mesh(&model);
     let material = PhysicalMaterial {
         albedo: Color {
             r: 128,
@@ -228,25 +225,26 @@ const UNIT_SCALE: f32 = 1.0 / (1.905 * 100.0);
 
 fn model_to_mesh(model: &Model) -> CPUMesh {
     let positions: Vec<f32> = model
-        .vertex_strips()
-        .flat_map(|mut strip| {
-            let mut a = strip.next().unwrap();
-            let mut b = strip.next().unwrap();
-            strip
-                .flat_map(move |c| {
-                    let tri = [a, b, c];
-                    a = b;
-                    b = c;
-                    tri
-                })
-                .flat_map(|vec| vec.iter())
-        })
+        .vertices()
+        .iter()
+        .flat_map(|vertex| vertex.position.iter().map(|pos| pos * UNIT_SCALE * 10.0))
         .collect();
+    let normals: Vec<f32> = model
+        .vertices()
+        .iter()
+        .flat_map(|vertex| vertex.normal.iter())
+        .collect();
+    let indices = Indices::U32(
+        model
+            .vertex_strip_indices()
+            .flat_map(|strip| strip.map(|index| index as u32))
+            .collect(),
+    );
 
-    let mut mesh = CPUMesh {
+    CPUMesh {
         positions,
+        normals: Some(normals),
+        indices: Some(indices),
         ..Default::default()
-    };
-    mesh.compute_normals();
-    mesh
+    }
 }

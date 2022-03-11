@@ -2,8 +2,6 @@ use crate::{index_range, Vector};
 use binrw::BinRead;
 use std::mem::size_of;
 
-pub const MDL_VERSION: i32 = 7;
-
 #[derive(Debug, Clone, BinRead)]
 pub struct VvdHeader {
     pub id: i32,
