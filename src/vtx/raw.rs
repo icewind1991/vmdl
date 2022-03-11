@@ -185,7 +185,7 @@ impl StripHeader {
         index_range(
             self.bone_state_change_offset,
             self.bone_state_change_count,
-            todo!(),
+            1,
         )
     }
 }
