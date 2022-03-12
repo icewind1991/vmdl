@@ -153,12 +153,13 @@ pub struct StripHeader {
     index_offset: i32,
     vertex_count: i32,
     vertex_offset: i32,
+    pub bone_count: u16,
     pub flags: StripFlags,
     bone_state_change_count: i32,
     bone_state_change_offset: i32,
 }
 
-static_assertions::const_assert_eq!(size_of::<StripHeader>(), 25);
+static_assertions::const_assert_eq!(size_of::<StripHeader>(), 27);
 
 bitflags! {
     #[derive(BinRead)]

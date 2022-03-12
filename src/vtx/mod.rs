@@ -186,7 +186,7 @@ impl StripGroup {
                     Ok(reader.read_le()?)
                 })
                 .collect::<Result<_>>()?,
-            flags: header.flags,
+            flags: dbg!(header).flags,
         })
     }
 }
@@ -204,7 +204,7 @@ impl Strip {
         Ok(Strip {
             vertices: header.vertex_indexes(),
             indices: header.index_indexes(),
-            flags: header.flags,
+            flags: dbg!(header).flags,
         })
     }
 
@@ -214,7 +214,6 @@ impl Strip {
 
     pub fn indices(&self) -> impl Iterator<Item = [usize; 3]> + 'static {
         if self.flags.contains(StripFlags::IS_TRI_STRIP) {
-            dbg!("strip");
             let offset = self.indices.start;
             Either::Left((0..self.indices.len()).map(move |i| {
                 let cw = i & 1;
