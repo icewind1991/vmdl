@@ -17,15 +17,15 @@ fn main() -> Result<(), vmdl::ModelError> {
     let vtx = Vtx::read(&data)?;
     let data = fs::read(path.with_extension("vvd"))?;
     let vvd = Vvd::read(&data)?;
-    dbg!(vvd.vertices.last());
+    dbg!(mdl.body_parts);
 
-    let model = Model::from_parts(mdl, vtx, vvd);
-    for strip in model.vertex_strips() {
-        for vertex in strip {
-            println!("{:?}", vertex);
-        }
-        println!("")
-    }
+    // let model = Model::from_parts(mdl, vtx, vvd);
+    // for strip in model.vertex_strips() {
+    //     for vertex in strip {
+    //         println!("{:?}", vertex);
+    //     }
+    //     println!("")
+    // }
 
     Ok(())
 }

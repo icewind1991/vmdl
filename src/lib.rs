@@ -37,22 +37,41 @@ impl Model {
     }
 
     pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
-        self.vtx
+        let mdl_meshes = self
+            .mdl
+            .body_parts
+            .iter()
+            .flat_map(|part| part.models.iter())
+            .flat_map(|model| model.meshes.iter());
+
+        let vtx_meshes = self
+            .vtx
             .body_parts
             .iter()
             .flat_map(|part| part.models.iter())
             .flat_map(|model| model.lods.iter().next())
-            .flat_map(|lod| lod.meshes.iter())
-            .flat_map(|mesh| mesh.strip_groups.iter())
-            .flat_map(|strip_group| {
+            .flat_map(|lod| lod.meshes.iter());
+
+        vtx_meshes
+            .zip(mdl_meshes)
+            .flat_map(|(vtx_mesh, mdl_mesh)| {
+                vtx_mesh
+                    .strip_groups
+                    .iter()
+                    .map(move |strip_group| (strip_group, mdl_mesh))
+            })
+            .flat_map(|(strip_group, mdl_mesh)| {
                 let group_indices = &strip_group.indices;
                 let vertices = &strip_group.vertices;
+                let mesh_vertex_offset = mdl_mesh.vertex_offset as usize;
                 strip_group.strips.iter().cloned().map(move |strip| {
                     strip
                         .indices()
                         .flat_map(|i| i)
                         .map(move |index| group_indices[index] as usize)
-                        .map(move |index| vertices[index].original_mesh_vertex_id as usize)
+                        .map(move |index| {
+                            vertices[index].original_mesh_vertex_id as usize + mesh_vertex_offset
+                        })
                 })
             })
     }

@@ -186,7 +186,7 @@ impl StripGroup {
                     Ok(reader.read_le()?)
                 })
                 .collect::<Result<_>>()?,
-            flags: dbg!(header).flags,
+            flags: header.flags,
         })
     }
 }
@@ -204,7 +204,7 @@ impl Strip {
         Ok(Strip {
             vertices: header.vertex_indexes(),
             indices: header.index_indexes(),
-            flags: dbg!(header).flags,
+            flags: header.flags,
         })
     }
 

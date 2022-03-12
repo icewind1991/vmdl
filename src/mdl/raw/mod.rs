@@ -1,6 +1,11 @@
+use crate::{index_range, FixedString};
 use crate::{Quaternion, RadianEuler, Vector};
 use binrw::BinRead;
 use bitflags::bitflags;
+use std::mem::size_of;
+
+pub mod header;
+pub mod header2;
 
 #[derive(Debug, Clone, BinRead)]
 pub struct Bone {
@@ -55,4 +60,82 @@ bitflags! {
         const BONE_HAS_SAVEFRAME_POS =		0x00200000;
         const BONE_HAS_SAVEFRAME_ROT =		0x00400000;
     }
+}
+
+#[derive(Debug, Clone, BinRead)]
+pub struct BodyPartHeader {
+    pub name_index: i32,
+    model_count: i32,
+    pub base: i32,
+    model_index: i32,
+}
+
+impl BodyPartHeader {
+    pub fn model_indexes(&self) -> impl Iterator<Item = usize> {
+        index_range(
+            self.model_index,
+            self.model_count,
+            size_of::<ModelHeader>() - size_of::<FixedString<0>>(),
+        )
+    }
+}
+
+#[derive(Debug, Clone, BinRead)]
+#[allow(dead_code)]
+pub struct ModelHeader {
+    pub name: FixedString<64>,
+    pub ty: i32,
+    pub bounding_radius: f32,
+    mesh_count: i32,
+    mesh_index: i32,
+    vertex_count: i32,
+    vertex_index: i32,
+    tangent_index: i32,
+    attachment_count: i32,
+    attachment_index: i32,
+    eyeball_count: i32,
+    eyeball_index: i32,
+    pub vertex_data: ModelVertexData,
+    padding: [i32; 8],
+}
+
+static_assertions::const_assert_eq!(size_of::<ModelHeader>() - size_of::<FixedString<0>>(), 148);
+
+impl ModelHeader {
+    pub fn mesh_indexes(&self) -> impl Iterator<Item = usize> {
+        index_range(self.mesh_index, self.mesh_count, size_of::<MeshHeader>())
+    }
+}
+
+#[derive(Debug, Clone, BinRead)]
+#[allow(dead_code)]
+pub struct ModelVertexData {
+    // these are pointers?
+    vertex_data: i32,
+    tangent_data: i32,
+}
+
+#[derive(Debug, Clone, BinRead)]
+#[allow(dead_code)]
+pub struct MeshHeader {
+    material: i32,
+    model_index: i32,
+    vertex_count: i32,
+    pub vertex_index: i32,
+    flex_count: i32,
+    flex_index: i32,
+    material_type: i32,
+    material_param: i32,
+    mesh_id: i32,
+    center: Vector,
+    vertex_data: MeshVertexData,
+    padding: [i32; 8],
+}
+
+#[derive(Debug, Clone, BinRead)]
+#[allow(dead_code)]
+pub struct MeshVertexData {
+    // these are pointers?
+    model_vertext_data: i32,
+    lod_vertex_count: [i32; 8],
 }

@@ -1,3 +1,4 @@
+use crate::mdl::raw::*;
 use crate::mdl::Bone;
 use crate::{index_range, FixedString, Vector};
 use binrw::BinRead;
@@ -219,7 +220,11 @@ impl StudioHeader {
     }
 
     pub fn body_part_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.body_part_offset, self.body_part_count, 1)
+        index_range(
+            self.body_part_offset,
+            self.body_part_count,
+            size_of::<BodyPartHeader>(),
+        )
     }
 
     pub fn attachment_indexes(&self) -> impl Iterator<Item = usize> {

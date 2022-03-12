@@ -36,6 +36,8 @@ pub struct BodyPartHeader {
     model_offset: i32,
 }
 
+static_assertions::const_assert_eq!(size_of::<BodyPartHeader>(), 8);
+
 impl BodyPartHeader {
     pub fn model_indexes(&self) -> impl Iterator<Item = usize> {
         index_range(
@@ -51,6 +53,8 @@ pub struct ModelHeader {
     lod_count: i32,
     lod_offset: i32,
 }
+
+static_assertions::const_assert_eq!(size_of::<ModelHeader>(), 8);
 
 impl ModelHeader {
     pub fn lod_indexes(&self) -> impl Iterator<Item = usize> {
@@ -80,6 +84,8 @@ pub struct MeshHeader {
     strip_group_offset: i32,
     pub flags: MeshFlags,
 }
+
+static_assertions::const_assert_eq!(size_of::<MeshHeader>(), 9);
 
 impl MeshHeader {
     pub fn strip_group_indexes(&self) -> impl Iterator<Item = usize> {
