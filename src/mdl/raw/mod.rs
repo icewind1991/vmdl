@@ -89,7 +89,7 @@ pub struct ModelHeader {
     mesh_count: i32,
     mesh_index: i32,
     vertex_count: i32,
-    vertex_index: i32,
+    pub vertex_index: i32,
     tangent_index: i32,
     attachment_count: i32,
     attachment_index: i32,

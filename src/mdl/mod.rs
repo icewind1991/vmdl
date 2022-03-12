@@ -4,7 +4,7 @@ pub use raw::header::*;
 pub use raw::header2::*;
 
 use crate::mdl::raw::{BodyPartHeader, Bone, MeshHeader, ModelHeader};
-use crate::{read_indexes, FixedString, ModelError};
+use crate::{read_indexes, read_relative, FixedString, ModelError, ReadRelative};
 use binrw::BinReaderExt;
 use std::io::Cursor;
 
@@ -47,21 +47,12 @@ pub struct BodyPart {
     pub models: Vec<Model>,
 }
 
-impl BodyPart {
-    pub fn read(data: &[u8], header: BodyPartHeader) -> Result<Self> {
+impl ReadRelative for BodyPart {
+    type Header = BodyPartHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(BodyPart {
-            models: header
-                .model_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Model",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    Model::read(data, header)
-                })
-                .collect::<Result<_>>()?,
+            models: read_relative(data, header.model_indexes())?,
             name_index: header.name_index,
         })
     }
@@ -73,26 +64,19 @@ pub struct Model {
     pub ty: i32,
     pub bounding_radius: f32,
     pub meshes: Vec<Mesh>,
+    pub vertex_offset: i32,
 }
 
-impl Model {
-    pub fn read(data: &[u8], header: ModelHeader) -> Result<Self> {
+impl ReadRelative for Model {
+    type Header = ModelHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Model {
-            meshes: header
-                .mesh_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Mesh",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    Mesh::read(data, header)
-                })
-                .collect::<Result<_>>()?,
+            meshes: read_relative(data, header.mesh_indexes())?,
             name: header.name,
             ty: header.ty,
             bounding_radius: header.bounding_radius,
+            vertex_offset: header.vertex_index,
         })
     }
 }
@@ -102,8 +86,10 @@ pub struct Mesh {
     pub vertex_offset: i32,
 }
 
-impl Mesh {
-    pub fn read(_data: &[u8], header: MeshHeader) -> Result<Self> {
+impl ReadRelative for Mesh {
+    type Header = MeshHeader;
+
+    fn read(_data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Mesh {
             vertex_offset: header.vertex_index,
         })

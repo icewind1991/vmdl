@@ -37,12 +37,18 @@ impl Model {
     }
 
     pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
-        let mdl_meshes = self
+        let mesh_vertex_offsets = self
             .mdl
             .body_parts
             .iter()
             .flat_map(|part| part.models.iter())
-            .flat_map(|model| model.meshes.iter());
+            .flat_map(|model| {
+                model
+                    .meshes
+                    .iter()
+                    .map(move |mesh| (mesh, model.vertex_offset))
+            })
+            .map(|(mesh, offset)| (mesh.vertex_offset + offset) as usize);
 
         let vtx_meshes = self
             .vtx
@@ -53,17 +59,16 @@ impl Model {
             .flat_map(|lod| lod.meshes.iter());
 
         vtx_meshes
-            .zip(mdl_meshes)
-            .flat_map(|(vtx_mesh, mdl_mesh)| {
+            .zip(mesh_vertex_offsets)
+            .flat_map(|(vtx_mesh, vertex_offset)| {
                 vtx_mesh
                     .strip_groups
                     .iter()
-                    .map(move |strip_group| (strip_group, mdl_mesh))
+                    .map(move |strip_group| (strip_group, vertex_offset))
             })
-            .flat_map(|(strip_group, mdl_mesh)| {
+            .flat_map(|(strip_group, mesh_vertex_offset)| {
                 let group_indices = &strip_group.indices;
                 let vertices = &strip_group.vertices;
-                let mesh_vertex_offset = mdl_mesh.vertex_offset as usize;
                 strip_group.strips.iter().cloned().map(move |strip| {
                     strip
                         .indices()
@@ -103,4 +108,38 @@ fn index_range(index: i32, count: i32, size: usize) -> impl Iterator<Item = usiz
     (0..count as usize)
         .map(move |i| i * size)
         .map(move |i| index as usize + i)
+}
+
+fn read_relative<T: ReadRelative, I: Iterator<Item = usize>>(
+    data: &[u8],
+    indexes: I,
+) -> Result<Vec<T>, ModelError>
+where
+    <<T as ReadRelative>::Header as BinRead>::Args: Default,
+{
+    indexes
+        .map(|index| {
+            let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
+                data: type_name::<T>(),
+                offset: index,
+            })?;
+            let mut reader = Cursor::new(data);
+            let header = reader.read_le()?;
+            T::read(data, header)
+        })
+        .collect()
+}
+
+trait ReadRelative: Sized {
+    type Header: BinRead;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError>;
+}
+
+impl<T: BinRead> ReadRelative for T {
+    type Header = T;
+
+    fn read(_data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
+        Ok(header)
+    }
 }

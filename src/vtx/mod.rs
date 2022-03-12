@@ -1,6 +1,6 @@
 mod raw;
 
-use crate::ModelError;
+use crate::{read_relative, ModelError, ReadRelative};
 use binrw::BinReaderExt;
 use itertools::Either;
 use raw::*;
@@ -45,21 +45,12 @@ pub struct BodyPart {
     pub models: Vec<Model>,
 }
 
-impl BodyPart {
-    fn read(data: &[u8], header: BodyPartHeader) -> Result<Self> {
+impl ReadRelative for BodyPart {
+    type Header = BodyPartHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(BodyPart {
-            models: header
-                .model_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Model",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    Model::read(data, header)
-                })
-                .collect::<Result<_>>()?,
+            models: read_relative(data, header.model_indexes())?,
         })
     }
 }
@@ -69,21 +60,12 @@ pub struct Model {
     pub lods: Vec<ModelLod>,
 }
 
-impl Model {
-    fn read(data: &[u8], header: ModelHeader) -> Result<Self> {
+impl ReadRelative for Model {
+    type Header = ModelHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Model {
-            lods: header
-                .lod_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "ModelLod",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    ModelLod::read(data, header)
-                })
-                .collect::<Result<_>>()?,
+            lods: read_relative(data, header.lod_indexes())?,
         })
     }
 }
@@ -94,21 +76,12 @@ pub struct ModelLod {
     pub switch_point: f32,
 }
 
-impl ModelLod {
-    fn read(data: &[u8], header: ModelLodHeader) -> Result<Self> {
+impl ReadRelative for ModelLod {
+    type Header = ModelLodHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(ModelLod {
-            meshes: header
-                .mesh_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Mesh",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    Mesh::read(data, header)
-                })
-                .collect::<Result<_>>()?,
+            meshes: read_relative(data, header.mesh_indexes())?,
             switch_point: header.switch_point,
         })
     }
@@ -120,21 +93,12 @@ pub struct Mesh {
     pub flags: MeshFlags,
 }
 
-impl Mesh {
-    fn read(data: &[u8], header: MeshHeader) -> Result<Self> {
+impl ReadRelative for Mesh {
+    type Header = MeshHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Mesh {
-            strip_groups: header
-                .strip_group_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "StripGroup",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    StripGroup::read(data, header)
-                })
-                .collect::<Result<_>>()?,
+            strip_groups: read_relative(data, header.strip_group_indexes())?,
             flags: header.flags,
         })
     }
@@ -149,43 +113,14 @@ pub struct StripGroup {
     pub flags: StripGroupFlags,
 }
 
-impl StripGroup {
-    fn read(data: &[u8], header: StripGroupHeader) -> Result<Self> {
+impl ReadRelative for StripGroup {
+    type Header = StripGroupHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(StripGroup {
-            vertices: header
-                .vertex_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Vertex",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    reader.read_le().map_err(ModelError::from)
-                })
-                .collect::<Result<_>>()?,
-            strips: header
-                .strip_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Strip",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    Strip::read(data, header)
-                })
-                .collect::<Result<_>>()?,
-            indices: header
-                .index_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "VertexIndex",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    Ok(reader.read_le()?)
-                })
-                .collect::<Result<_>>()?,
+            vertices: read_relative(data, header.vertex_indexes())?,
+            strips: read_relative(data, header.strip_indexes())?,
+            indices: read_relative(data, header.index_indexes())?,
             flags: header.flags,
         })
     }
@@ -199,15 +134,19 @@ pub struct Strip {
     indices: Range<usize>,
 }
 
-impl Strip {
-    fn read(_data: &[u8], header: StripHeader) -> Result<Self> {
+impl ReadRelative for Strip {
+    type Header = StripHeader;
+
+    fn read(_data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Strip {
             vertices: header.vertex_indexes(),
             indices: header.index_indexes(),
             flags: header.flags,
         })
     }
+}
 
+impl Strip {
     pub fn vertices(&self) -> impl Iterator<Item = usize> + 'static {
         self.vertices.clone()
     }
