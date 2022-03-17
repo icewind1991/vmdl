@@ -24,10 +24,11 @@ impl VvdHeader {
         )
     }
 
+    pub fn has_fixups(&self) -> bool {
+        self.fixup_count > 0
+    }
+
     pub fn vertex_indexes(&self, lod: i32) -> Option<impl Iterator<Item = usize>> {
-        if lod > 0 && lod > self.fixup_count {
-            todo!("lod fixup not supported")
-        }
         if lod < self.lod_count {
             Some(index_range(
                 self.vertex_index,

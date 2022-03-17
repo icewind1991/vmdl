@@ -108,6 +108,24 @@ fn index_range(index: i32, count: i32, size: usize) -> impl Iterator<Item = usiz
         .map(move |i| index as usize + i)
 }
 
+fn read_relative_iter<'a, T: ReadRelative, I: 'a + Iterator<Item = usize>>(
+    data: &'a [u8],
+    indexes: I,
+) -> impl Iterator<Item = Result<T, ModelError>> + 'a
+where
+    <<T as ReadRelative>::Header as BinRead>::Args: Default,
+{
+    indexes.map(|index| {
+        let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
+            data: type_name::<T>(),
+            offset: index,
+        })?;
+        let mut reader = Cursor::new(data);
+        let header = reader.read_le()?;
+        T::read(data, header)
+    })
+}
+
 fn read_relative<T: ReadRelative, I: Iterator<Item = usize>>(
     data: &[u8],
     indexes: I,
@@ -115,17 +133,7 @@ fn read_relative<T: ReadRelative, I: Iterator<Item = usize>>(
 where
     <<T as ReadRelative>::Header as BinRead>::Args: Default,
 {
-    indexes
-        .map(|index| {
-            let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                data: type_name::<T>(),
-                offset: index,
-            })?;
-            let mut reader = Cursor::new(data);
-            let header = reader.read_le()?;
-            T::read(data, header)
-        })
-        .collect()
+    read_relative_iter(data, indexes).collect()
 }
 
 trait ReadRelative: Sized {

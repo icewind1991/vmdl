@@ -1,7 +1,7 @@
 mod raw;
 
-use crate::vvd::raw::VvdHeader;
-use crate::ModelError;
+use crate::vvd::raw::{VertexFileFixup, VvdHeader};
+use crate::{read_relative, read_relative_iter, ModelError};
 use binrw::BinReaderExt;
 pub use raw::{BoneWeight, Tangent, Vertex};
 use std::io::Cursor;
@@ -18,20 +18,21 @@ impl Vvd {
     pub fn read(data: &[u8]) -> Result<Self> {
         let mut reader = Cursor::new(data);
         let header: VvdHeader = reader.read_le()?;
-        Ok(Vvd {
-            vertices: header
-                .vertex_indexes(0)
-                .unwrap()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "Vertex",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    Ok(reader.read_le()?)
-                })
-                .collect::<Result<_>>()?,
-            header,
-        })
+        let source_vertices = read_relative(data, header.vertex_indexes(0).unwrap())?;
+        let vertices = if !header.has_fixups() {
+            source_vertices
+        } else {
+            let mut vertices = Vec::new();
+            for fixup in read_relative_iter::<'_, VertexFileFixup, _>(data, header.fixup_indexes())
+            {
+                let fixup = fixup?;
+                vertices.extend_from_slice(
+                    &source_vertices[fixup.source_vertex_id as usize
+                        ..(fixup.source_vertex_id + fixup.vertex_count) as usize],
+                );
+            }
+            vertices
+        };
+        Ok(Vvd { vertices, header })
     }
 }
