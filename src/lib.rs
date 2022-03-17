@@ -46,9 +46,8 @@ impl Model {
                 model
                     .meshes
                     .iter()
-                    .map(move |mesh| (mesh, model.vertex_offset))
-            })
-            .map(|(mesh, offset)| (mesh.vertex_offset + offset) as usize);
+                    .map(move |mesh| (mesh.vertex_offset + model.vertex_offset) as usize)
+            });
 
         let vtx_meshes = self
             .vtx
@@ -69,10 +68,9 @@ impl Model {
             .flat_map(|(strip_group, mesh_vertex_offset)| {
                 let group_indices = &strip_group.indices;
                 let vertices = &strip_group.vertices;
-                strip_group.strips.iter().cloned().map(move |strip| {
+                strip_group.strips.iter().map(move |strip| {
                     strip
                         .indices()
-                        .flat_map(|i| i)
                         .map(move |index| group_indices[index] as usize)
                         .map(move |index| {
                             vertices[index].original_mesh_vertex_id as usize + mesh_vertex_offset

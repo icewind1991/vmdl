@@ -151,16 +151,16 @@ impl Strip {
         self.vertices.clone()
     }
 
-    pub fn indices(&self) -> impl Iterator<Item = [usize; 3]> + 'static {
+    pub fn indices(&self) -> impl Iterator<Item = usize> + 'static {
         if self.flags.contains(StripFlags::IS_TRI_STRIP) {
             let offset = self.indices.start;
-            Either::Left((0..self.indices.len()).map(move |i| {
+            Either::Left((0..self.indices.len()).flat_map(move |i| {
                 let cw = i & 1;
                 let idx = offset + i;
-                [idx, idx + 1 - cw, idx + 2 - cw]
+                [idx, idx + 1 - cw, idx + 2 - cw].into_iter()
             }))
         } else {
-            Either::Right(self.indices.clone().step_by(3).map(|i| [i, i + 1, i + 2]))
+            Either::Right(self.indices.clone())
         }
     }
 }
