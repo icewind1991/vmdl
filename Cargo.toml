@@ -6,7 +6,6 @@ exclude = ["data"]
 
 [dependencies]
 arrayvec = "0.7.2"
-binrw = "0.8.0"
 thiserror = "1.0.30"
 static_assertions = "1.1.0"
 bitflags = "1.0.4"

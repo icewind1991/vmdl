@@ -1,14 +1,14 @@
-use crate::{index_range, FixedString, Pod};
+use crate::{index_range, FixedString};
 use crate::{Quaternion, RadianEuler, Vector};
-use binrw::BinRead;
 use bitflags::bitflags;
-use bytemuck::Zeroable;
+use bytemuck::{Pod, Zeroable};
 use std::mem::size_of;
 
 pub mod header;
 pub mod header2;
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct Bone {
     pub sz_name_index: i32,
     pub parent: i32,               // parent bone
@@ -34,7 +34,8 @@ pub struct Bone {
 }
 
 bitflags! {
-    #[derive(BinRead)]
+    #[derive(Zeroable, Pod)]
+    #[repr(C)]
     pub struct BoneFlags: u32 {
         const BONE_PHYSICALLY_SIMULATED = 	0x00000001;
         const BONE_PHYSICS_PROCEDURAL = 	0x00000002;

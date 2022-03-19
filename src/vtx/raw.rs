@@ -1,11 +1,11 @@
 use crate::{index_range, Pod};
-use binrw::BinRead;
 use bitflags::bitflags;
 use bytemuck::Zeroable;
 use std::mem::size_of;
 use std::ops::Range;
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct VtxHeader {
     pub version: i32,
     pub vertex_cache_size: i32,
@@ -103,7 +103,7 @@ impl MeshHeader {
 }
 
 bitflags! {
-    #[derive(BinRead, Zeroable, Pod)]
+    #[derive(Zeroable, Pod)]
     #[repr(C)]
     pub struct MeshFlags: u8 {
         const IS_TEETH = 0x01;
@@ -150,7 +150,7 @@ impl StripGroupHeader {
 }
 
 bitflags! {
-    #[derive(BinRead, Zeroable, Pod)]
+    #[derive(Zeroable, Pod)]
     #[repr(C)]
     pub struct StripGroupFlags: u8 {
         const IS_FLEXED =         0x01;
@@ -177,7 +177,7 @@ pub struct StripHeader {
 static_assertions::const_assert_eq!(size_of::<StripHeader>(), 27);
 
 bitflags! {
-    #[derive(BinRead, Zeroable, Pod)]
+    #[derive(Zeroable, Pod)]
     #[repr(C)]
     pub struct StripFlags: u8 {
         const IS_TRI_LIST =  0x01;

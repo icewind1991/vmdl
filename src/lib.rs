@@ -8,13 +8,11 @@ pub mod vvd;
 use crate::mdl::Mdl;
 use crate::vtx::Vtx;
 use crate::vvd::{Vertex, Vvd};
-use binrw::{BinRead, BinReaderExt};
 use bytemuck::{pod_read_unaligned, Pod};
 pub use error::*;
 pub use handle::Handle;
 pub use shared::*;
 use std::any::type_name;
-use std::io::Cursor;
 use std::mem::size_of;
 
 pub struct Model {
@@ -82,13 +80,10 @@ impl Model {
     }
 }
 
-fn read_indexes<'a, I: Iterator<Item = usize> + 'static, T: BinRead>(
+fn read_indexes<'a, I: Iterator<Item = usize> + 'static, T: Readable>(
     indexes: I,
     data: &'a [u8],
-) -> impl Iterator<Item = Result<T, ModelError>> + 'a
-where
-    T::Args: Default,
-{
+) -> impl Iterator<Item = Result<T, ModelError>> + 'a {
     indexes
         .map(|index| {
             data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
@@ -96,12 +91,7 @@ where
                 offset: index,
             })
         })
-        .map(|data| {
-            data.and_then(|data| {
-                let mut cursor = Cursor::new(data);
-                cursor.read_le().map_err(ModelError::from)
-            })
-        })
+        .map(|data| data.and_then(|data| T::read(data)))
 }
 
 fn index_range(index: i32, count: i32, size: usize) -> impl Iterator<Item = usize> {

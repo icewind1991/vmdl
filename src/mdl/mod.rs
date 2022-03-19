@@ -5,8 +5,6 @@ pub use raw::header2::*;
 
 use crate::mdl::raw::{BodyPartHeader, Bone, MeshHeader, ModelHeader};
 use crate::{read_indexes, read_relative, FixedString, ModelError, ReadRelative, Readable};
-use binrw::BinReaderExt;
-use std::io::Cursor;
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -19,8 +17,7 @@ pub struct Mdl {
 
 impl Mdl {
     pub fn read(data: &[u8]) -> Result<Self> {
-        let mut reader = Cursor::new(data);
-        let header: StudioHeader = reader.read_le()?;
+        let header = <StudioHeader as Readable>::read(data)?;
         let bones = read_indexes(header.bone_indexes(), data).collect::<Result<_>>()?;
         Ok(Mdl {
             bones,

@@ -1,12 +1,11 @@
-use crate::{BinRead, ModelError, StringError};
+use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
-use binrw::{BinResult, ReadOptions};
 use bytemuck::{Pod, Zeroable};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
 
-#[derive(Debug, Clone, Copy, BinRead, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct Vector {
     pub x: f32,
@@ -54,7 +53,8 @@ impl Add<Vector> for Vector {
     }
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct Quaternion {
     pub x: f32,
     pub y: f32,
@@ -62,7 +62,8 @@ pub struct Quaternion {
     pub w: f32,
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct RadianEuler {
     pub x: f32,
     pub y: f32,
@@ -105,40 +106,5 @@ impl<const N: usize> FixedString<N> {
 impl<const LEN: usize> Display for FixedString<LEN> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.0, f)
-    }
-}
-
-impl<const LEN: usize> BinRead for FixedString<LEN> {
-    type Args = ();
-
-    fn read_options<R: binrw::io::Read + binrw::io::Seek>(
-        reader: &mut R,
-        options: &ReadOptions,
-        args: Self::Args,
-    ) -> BinResult<Self> {
-        use std::str;
-
-        let name_buf = <[u8; LEN]>::read_options(reader, options, args)?;
-
-        let zero_pos =
-            name_buf
-                .iter()
-                .position(|c| *c == 0)
-                .ok_or_else(|| binrw::Error::Custom {
-                    pos: reader.stream_position().unwrap(),
-                    err: Box::new(StringError::NotNullTerminated),
-                })?;
-        let name = &name_buf[..zero_pos];
-        Ok(FixedString(
-            ArrayString::from(
-                str::from_utf8(name)
-                    .map_err(StringError::NonUTF8)
-                    .map_err(|e| binrw::Error::Custom {
-                        pos: reader.stream_position().unwrap(),
-                        err: Box::new(e),
-                    })?,
-            )
-            .unwrap(),
-        ))
     }
 }

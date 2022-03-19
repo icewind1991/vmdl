@@ -1,10 +1,8 @@
 mod raw;
 
 use crate::vvd::raw::{VertexFileFixup, VvdHeader};
-use crate::{read_relative, read_relative_iter, ModelError};
-use binrw::BinReaderExt;
+use crate::{read_relative, read_relative_iter, ModelError, Readable};
 pub use raw::{BoneWeight, Tangent, Vertex};
-use std::io::Cursor;
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -16,8 +14,7 @@ pub struct Vvd {
 
 impl Vvd {
     pub fn read(data: &[u8]) -> Result<Self> {
-        let mut reader = Cursor::new(data);
-        let header: VvdHeader = reader.read_le()?;
+        let header = <VvdHeader as Readable>::read(data)?;
         let source_vertices = read_relative(data, header.vertex_indexes(0).unwrap())?;
         let vertices = if !header.has_fixups() {
             source_vertices

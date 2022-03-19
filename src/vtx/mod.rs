@@ -1,11 +1,9 @@
 mod raw;
 
-use crate::{read_relative, ModelError, ReadRelative};
-use binrw::BinReaderExt;
+use crate::{read_relative, ModelError, ReadRelative, Readable};
 use itertools::Either;
 use raw::*;
 pub use raw::{MeshFlags, StripFlags, StripGroupFlags, Vertex};
-use std::io::Cursor;
 use std::ops::Range;
 
 pub const MDL_VERSION: i32 = 7;
@@ -20,8 +18,7 @@ pub struct Vtx {
 
 impl Vtx {
     pub fn read(data: &[u8]) -> Result<Self> {
-        let mut reader = Cursor::new(data);
-        let header: VtxHeader = reader.read_le()?;
+        let header = <VtxHeader as Readable>::read(data)?;
         Ok(Vtx {
             body_parts: read_relative(data, header.body_indexes())?,
             header,
