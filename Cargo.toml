@@ -12,7 +12,18 @@ static_assertions = "1.1.0"
 bitflags = "1.0.4"
 itertools = "0.10.3"
 tracing = "0.1.29"
+bytemuck = { version = "1.8.0", features = ["derive"] }
 
 [dev-dependencies]
 three-d = "0.10.2"
 miette = { version = "4.2.1", features = ["fancy"] }
+criterion = "0.3"
+iai = "0.1"
+
+[[bench]]
+name = "parse"
+harness = false
+
+[[bench]]
+name = "iai"
+harness = false
