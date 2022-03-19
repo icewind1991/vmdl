@@ -1,6 +1,7 @@
-use crate::index_range;
+use crate::{index_range, Pod};
 use binrw::BinRead;
 use bitflags::bitflags;
+use bytemuck::Zeroable;
 use std::mem::size_of;
 use std::ops::Range;
 
@@ -30,7 +31,8 @@ impl VtxHeader {
     }
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct BodyPartHeader {
     model_count: i32,
     model_offset: i32,
@@ -48,7 +50,8 @@ impl BodyPartHeader {
     }
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct ModelHeader {
     lod_count: i32,
     lod_offset: i32,
@@ -62,7 +65,8 @@ impl ModelHeader {
     }
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct ModelLodHeader {
     mesh_count: i32,
     mesh_offset: i32,
@@ -77,7 +81,8 @@ impl ModelLodHeader {
     }
 }
 
-#[derive(Debug, Clone, Copy, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[repr(packed)]
 pub struct MeshHeader {
     strip_group_count: i32,
@@ -98,14 +103,16 @@ impl MeshHeader {
 }
 
 bitflags! {
-    #[derive(BinRead)]
+    #[derive(BinRead, Zeroable, Pod)]
+    #[repr(C)]
     pub struct MeshFlags: u8 {
         const IS_TEETH = 0x01;
         const IS_EYES =  0x02;
     }
 }
 
-#[derive(Debug, Clone, Copy, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[repr(packed)]
 pub struct StripGroupHeader {
     vertex_count: i32,
@@ -143,7 +150,8 @@ impl StripGroupHeader {
 }
 
 bitflags! {
-    #[derive(BinRead)]
+    #[derive(BinRead, Zeroable, Pod)]
+    #[repr(C)]
     pub struct StripGroupFlags: u8 {
         const IS_FLEXED =         0x01;
         const IS_HWSKINNED =      0x02;
@@ -152,7 +160,8 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Copy, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[repr(packed)]
 pub struct StripHeader {
     index_count: i32,
@@ -168,7 +177,8 @@ pub struct StripHeader {
 static_assertions::const_assert_eq!(size_of::<StripHeader>(), 27);
 
 bitflags! {
-    #[derive(BinRead)]
+    #[derive(BinRead, Zeroable, Pod)]
+    #[repr(C)]
     pub struct StripFlags: u8 {
         const IS_TRI_LIST =  0x01;
         const IS_TRI_STRIP = 0x02;
@@ -195,7 +205,8 @@ impl StripHeader {
     }
 }
 
-#[derive(Debug, Clone, Copy, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[repr(packed)]
 pub struct Vertex {
     pub bone_weight_indexes: [u8; 3],

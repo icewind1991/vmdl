@@ -4,7 +4,7 @@ pub use raw::header::*;
 pub use raw::header2::*;
 
 use crate::mdl::raw::{BodyPartHeader, Bone, MeshHeader, ModelHeader};
-use crate::{read_indexes, read_relative, FixedString, ModelError, ReadRelative};
+use crate::{read_indexes, read_relative, FixedString, ModelError, ReadRelative, Readable};
 use binrw::BinReaderExt;
 use std::io::Cursor;
 
@@ -31,8 +31,7 @@ impl Mdl {
                         data: "BodyPart",
                         offset: index,
                     })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
+                    let header = <BodyPartHeader as Readable>::read(data)?;
                     BodyPart::read(data, header)
                 })
                 .collect::<Result<_>>()?,
@@ -73,7 +72,7 @@ impl ReadRelative for Model {
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Model {
             meshes: read_relative(data, header.mesh_indexes())?,
-            name: header.name,
+            name: header.name.try_into()?,
             ty: header.ty,
             bounding_radius: header.bounding_radius,
             vertex_offset: header.vertex_index,

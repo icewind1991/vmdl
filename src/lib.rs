@@ -9,11 +9,13 @@ use crate::mdl::Mdl;
 use crate::vtx::Vtx;
 use crate::vvd::{Vertex, Vvd};
 use binrw::{BinRead, BinReaderExt};
+use bytemuck::{pod_read_unaligned, Pod};
 pub use error::*;
 pub use handle::Handle;
 pub use shared::*;
 use std::any::type_name;
 use std::io::Cursor;
+use std::mem::size_of;
 
 pub struct Model {
     #[allow(dead_code)]
@@ -111,17 +113,13 @@ fn index_range(index: i32, count: i32, size: usize) -> impl Iterator<Item = usiz
 fn read_relative_iter<'a, T: ReadRelative, I: 'a + Iterator<Item = usize>>(
     data: &'a [u8],
     indexes: I,
-) -> impl Iterator<Item = Result<T, ModelError>> + 'a
-where
-    <<T as ReadRelative>::Header as BinRead>::Args: Default,
-{
+) -> impl Iterator<Item = Result<T, ModelError>> + 'a {
     indexes.map(|index| {
         let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
             data: type_name::<T>(),
             offset: index,
         })?;
-        let mut reader = Cursor::new(data);
-        let header = reader.read_le()?;
+        let header = <T::Header as Readable>::read(data)?;
         T::read(data, header)
     })
 }
@@ -129,20 +127,28 @@ where
 fn read_relative<T: ReadRelative, I: Iterator<Item = usize>>(
     data: &[u8],
     indexes: I,
-) -> Result<Vec<T>, ModelError>
-where
-    <<T as ReadRelative>::Header as BinRead>::Args: Default,
-{
+) -> Result<Vec<T>, ModelError> {
     read_relative_iter(data, indexes).collect()
 }
 
+trait Readable: Sized {
+    fn read(data: &[u8]) -> Result<Self, ModelError>;
+}
+
+impl<T: Pod> Readable for T {
+    fn read(data: &[u8]) -> Result<Self, ModelError> {
+        let data = &data[0..size_of::<Self>()];
+        Ok(pod_read_unaligned(data))
+    }
+}
+
 trait ReadRelative: Sized {
-    type Header: BinRead;
+    type Header: Readable;
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError>;
 }
 
-impl<T: BinRead> ReadRelative for T {
+impl<T: Readable> ReadRelative for T {
     type Header = T;
 
     fn read(_data: &[u8], header: Self::Header) -> Result<Self, ModelError> {

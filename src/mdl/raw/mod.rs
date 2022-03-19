@@ -1,7 +1,8 @@
-use crate::{index_range, FixedString};
+use crate::{index_range, FixedString, Pod};
 use crate::{Quaternion, RadianEuler, Vector};
 use binrw::BinRead;
 use bitflags::bitflags;
+use bytemuck::Zeroable;
 use std::mem::size_of;
 
 pub mod header;
@@ -62,7 +63,8 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 pub struct BodyPartHeader {
     pub name_index: i32,
     model_count: i32,
@@ -80,10 +82,11 @@ impl BodyPartHeader {
     }
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[allow(dead_code)]
 pub struct ModelHeader {
-    pub name: FixedString<64>,
+    pub name: [u8; 64],
     pub ty: i32,
     pub bounding_radius: f32,
     mesh_count: i32,
@@ -99,7 +102,7 @@ pub struct ModelHeader {
     padding: [i32; 8],
 }
 
-static_assertions::const_assert_eq!(size_of::<ModelHeader>() - size_of::<FixedString<0>>(), 148);
+static_assertions::const_assert_eq!(size_of::<ModelHeader>(), 148);
 
 impl ModelHeader {
     pub fn mesh_indexes(&self) -> impl Iterator<Item = usize> {
@@ -107,7 +110,8 @@ impl ModelHeader {
     }
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[allow(dead_code)]
 pub struct ModelVertexData {
     // these are pointers?
@@ -115,7 +119,8 @@ pub struct ModelVertexData {
     tangent_data: i32,
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[allow(dead_code)]
 pub struct MeshHeader {
     material: i32,
@@ -132,7 +137,8 @@ pub struct MeshHeader {
     padding: [i32; 8],
 }
 
-#[derive(Debug, Clone, BinRead)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
 #[allow(dead_code)]
 pub struct MeshVertexData {
     // these are pointers?

@@ -1,11 +1,13 @@
-use crate::{BinRead, StringError};
+use crate::{BinRead, ModelError, StringError};
 use arrayvec::ArrayString;
 use binrw::{BinResult, ReadOptions};
+use bytemuck::{Pod, Zeroable};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
 
-#[derive(Debug, Clone, Copy, BinRead)]
+#[derive(Debug, Clone, Copy, BinRead, Zeroable, Pod)]
+#[repr(C)]
 pub struct Vector {
     pub x: f32,
     pub y: f32,
@@ -70,6 +72,23 @@ pub struct RadianEuler {
 /// Fixed length, null-terminated string
 #[derive(Debug, Clone)]
 pub struct FixedString<const LEN: usize>(ArrayString<LEN>);
+
+impl<const LEN: usize> TryFrom<[u8; LEN]> for FixedString<LEN> {
+    type Error = ModelError;
+
+    fn try_from(name_buf: [u8; LEN]) -> Result<Self, Self::Error> {
+        use std::str;
+
+        let zero_pos = name_buf
+            .iter()
+            .position(|c| *c == 0)
+            .ok_or(StringError::NotNullTerminated)?;
+        let name = &name_buf[..zero_pos];
+        Ok(FixedString(
+            ArrayString::from(str::from_utf8(name).map_err(StringError::NonUTF8)?).unwrap(),
+        ))
+    }
+}
 
 impl<const N: usize> AsRef<str> for FixedString<N> {
     fn as_ref(&self) -> &str {

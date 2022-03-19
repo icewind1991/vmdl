@@ -23,18 +23,7 @@ impl Vtx {
         let mut reader = Cursor::new(data);
         let header: VtxHeader = reader.read_le()?;
         Ok(Vtx {
-            body_parts: header
-                .body_indexes()
-                .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                        data: "BodyPart",
-                        offset: index,
-                    })?;
-                    let mut reader = Cursor::new(data);
-                    let header = reader.read_le()?;
-                    BodyPart::read(data, header)
-                })
-                .collect::<Result<_>>()?,
+            body_parts: read_relative(data, header.body_indexes())?,
             header,
         })
     }
