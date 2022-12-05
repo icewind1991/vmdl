@@ -4,6 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
+use cgmath::Vector3;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
@@ -11,6 +12,26 @@ pub struct Vector {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+impl From<Vector> for Vector3<f32> {
+    fn from(v: Vector) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+    }
+}
+
+impl From<Vector3<f32>> for Vector {
+    fn from(v: Vector3<f32>) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+    }
 }
 
 impl Vector {
