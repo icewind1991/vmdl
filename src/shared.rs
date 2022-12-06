@@ -3,7 +3,7 @@ use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::ops::Add;
+use std::ops::{Add, Mul};
 use cgmath::Vector3;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
@@ -70,6 +70,18 @@ impl Add<Vector> for Vector {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
             z: self.z + rhs.z,
+        }
+    }
+}
+
+impl Mul<f32> for Vector {
+    type Output = Vector;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
         }
     }
 }

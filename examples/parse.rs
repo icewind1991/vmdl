@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use vmdl::mdl::Mdl;
 use vmdl::vtx::Vtx;
 use vmdl::vvd::Vvd;
-use vmdl::Model;
 
 fn main() -> Result<(), vmdl::ModelError> {
     let mut args = args();
@@ -14,9 +13,9 @@ fn main() -> Result<(), vmdl::ModelError> {
     let data = fs::read(&path)?;
     let mdl = Mdl::read(&data)?;
     let data = fs::read(path.with_extension("dx90.vtx"))?;
-    let vtx = Vtx::read(&data)?;
+    let _vtx = Vtx::read(&data)?;
     let data = fs::read(path.with_extension("vvd"))?;
-    let vvd = Vvd::read(&data)?;
+    let _vvd = Vvd::read(&data)?;
     dbg!(mdl.body_parts);
 
     // let model = Model::from_parts(mdl, vtx, vvd);
