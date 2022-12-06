@@ -249,13 +249,13 @@ fn model_to_mesh(model: &Model) -> CpuMesh {
     let offset = model
         .vertices()
         .iter()
-        .map(|vert| vert.position.z)
-        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .map(|vert| vert.position.y)
+        .max_by(|a, b| a.total_cmp(b))
         .unwrap();
     let offset = Vector {
         x: 0.0,
-        y: 0.0,
-        z: -offset / 2.0,
+        y: -offset / 2.0,
+        z: 0.0,
     };
 
     let positions: Vec<Vec3> = model
