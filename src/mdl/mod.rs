@@ -1,10 +1,12 @@
 mod raw;
 
+use std::mem::size_of;
 pub use raw::header::*;
 pub use raw::header2::*;
 
 use crate::mdl::raw::{BodyPartHeader, Bone, MeshHeader, ModelHeader};
 use crate::{read_indexes, read_relative, FixedString, ModelError, ReadRelative, Readable};
+use crate::vvd::Vertex;
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -60,6 +62,7 @@ pub struct Model {
     pub ty: i32,
     pub bounding_radius: f32,
     pub meshes: Vec<Mesh>,
+    /// Base offset of the model's vertices
     pub vertex_offset: i32,
 }
 
@@ -72,7 +75,7 @@ impl ReadRelative for Model {
             name: header.name.try_into()?,
             ty: header.ty,
             bounding_radius: header.bounding_radius,
-            vertex_offset: header.vertex_index,
+            vertex_offset: header.vertex_index  / (size_of::<Vertex>() as i32),
         })
     }
 }
