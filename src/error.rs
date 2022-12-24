@@ -9,6 +9,8 @@ pub enum ModelError {
     String(#[from] StringError),
     #[error("referenced data to {data} is out of bounds at {offset}")]
     OutOfBounds { data: &'static str, offset: usize },
+    #[error("Trying to read past the end of the file")]
+    Eof(usize),
 }
 
 #[derive(Debug, Error)]

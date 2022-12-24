@@ -16,7 +16,13 @@ pub struct Vvd {
 impl Vvd {
     pub fn read(data: &[u8]) -> Result<Self> {
         let header = <VvdHeader as Readable>::read(data)?;
-        let source_vertices = read_relative(data, header.vertex_indexes(0).unwrap())?;
+        let source_vertices = read_relative(
+            data,
+            header.vertex_indexes(0).ok_or(ModelError::OutOfBounds {
+                data: "model_lod",
+                offset: 0,
+            })?,
+        )?;
         let vertices = if !header.has_fixups() {
             source_vertices
         } else {
@@ -24,10 +30,14 @@ impl Vvd {
             for fixup in read_relative_iter::<'_, VertexFileFixup, _>(data, header.fixup_indexes())
             {
                 let fixup = fixup?;
-                vertices.extend_from_slice(
-                    &source_vertices[fixup.source_vertex_id as usize
-                        ..(fixup.source_vertex_id + fixup.vertex_count) as usize],
-                );
+                let from = fixup.source_vertex_id as usize;
+                let to = (fixup.source_vertex_id.saturating_add(fixup.vertex_count)) as usize;
+                vertices.extend_from_slice(&source_vertices.get(from..to).ok_or_else(|| {
+                    ModelError::OutOfBounds {
+                        data: "source_vertices",
+                        offset: to as usize,
+                    }
+                })?);
             }
             vertices
         };

@@ -188,11 +188,11 @@ bitflags! {
 impl StripHeader {
     /// Index into the VVD file vertexes
     pub fn vertex_indexes(&self) -> Range<usize> {
-        self.vertex_offset as usize..(self.vertex_offset + self.vertex_count) as usize
+        self.vertex_offset as usize..(self.vertex_offset.saturating_add(self.vertex_count)) as usize
     }
 
     pub fn index_indexes(&self) -> Range<usize> {
-        self.index_offset as usize..(self.index_offset + self.index_count) as usize
+        self.index_offset as usize..(self.index_offset.saturating_add(self.index_count)) as usize
     }
 
     #[allow(dead_code)]

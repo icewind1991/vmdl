@@ -128,7 +128,9 @@ trait Readable: Sized {
 
 impl<T: Pod> Readable for T {
     fn read(data: &[u8]) -> Result<Self, ModelError> {
-        let data = &data[0..size_of::<Self>()];
+        let data = data
+            .get(0..size_of::<Self>())
+            .ok_or(ModelError::Eof(size_of::<Self>()))?;
         Ok(pod_read_unaligned(data))
     }
 }
