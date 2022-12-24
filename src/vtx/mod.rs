@@ -10,6 +10,7 @@ pub const MDL_VERSION: i32 = 7;
 
 type Result<T> = std::result::Result<T, ModelError>;
 
+/// The vtx file contains the mesh data for each mesh in an mdl, indexing into the vvd file
 #[derive(Debug, Clone)]
 pub struct Vtx {
     pub header: VtxHeader,

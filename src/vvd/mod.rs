@@ -6,6 +6,7 @@ pub use raw::{BoneWeight, Tangent, Vertex};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
+/// The vvd file contains the raw vertex data that will be indexed into based on the vtx data
 #[derive(Debug, Clone)]
 pub struct Vvd {
     pub header: VvdHeader,
