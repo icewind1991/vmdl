@@ -5,9 +5,10 @@ mod shared;
 pub mod vtx;
 pub mod vvd;
 
-use crate::mdl::Mdl;
-use crate::vtx::Vtx;
-use crate::vvd::{Vertex, Vvd};
+pub use crate::mdl::Mdl;
+pub use crate::vtx::Vtx;
+use crate::vvd::Vertex;
+pub use crate::vvd::Vvd;
 use bytemuck::{pod_read_unaligned, Pod};
 pub use error::*;
 pub use handle::Handle;

@@ -46,7 +46,7 @@ fn main() -> Result<(), Error> {
         max_size: Some((1920, 1080)),
         ..Default::default()
     })
-        .unwrap();
+    .unwrap();
     let context = window.gl();
 
     let mut camera = Camera::new_perspective(
@@ -82,10 +82,13 @@ fn main() -> Result<(), Error> {
         ..Default::default()
     };
 
-    let model: three_d::Model<PhysicalMaterial> = three_d::Model::new(&context, &CpuModel {
-        materials: vec![material],
-        geometries: vec![cpu_mesh],
-    })?;
+    let model: three_d::Model<PhysicalMaterial> = three_d::Model::new(
+        &context,
+        &CpuModel {
+            materials: vec![material],
+            geometries: vec![cpu_mesh],
+        },
+    )?;
 
     let mut directional = [
         DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(1.0, -1.0, 0.0)),
@@ -107,16 +110,19 @@ fn main() -> Result<(), Error> {
     window.render_loop(move |mut frame_input| {
         let mut change = frame_input.first_frame;
         let mut panel_width = frame_input.viewport.width;
-        change |= gui
-            .update(&mut frame_input.events, frame_input.accumulated_time, frame_input.viewport, frame_input.device_pixel_ratio, |gui_context| {
+        change |= gui.update(
+            &mut frame_input.events,
+            frame_input.accumulated_time,
+            frame_input.viewport,
+            frame_input.device_pixel_ratio,
+            |gui_context| {
                 use three_d::egui::*;
                 SidePanel::left("side_panel").show(gui_context, |ui| {
                     ui.heading("Debug Panel");
 
                     ui.label("Light options");
                     ui.add(
-                        Slider::new(&mut ambient.intensity, 0.0..=1.0)
-                            .text("Ambient intensity"),
+                        Slider::new(&mut ambient.intensity, 0.0..=1.0).text("Ambient intensity"),
                     );
                     ui.add(
                         Slider::new(&mut directional_intensity, 0.0..=1.0)
@@ -149,7 +155,8 @@ fn main() -> Result<(), Error> {
                     ui.add(Label::new(format!("\tz: {}", camera.position().z)));
                 });
                 panel_width = gui_context.used_size().x as u32;
-            });
+            },
+        );
 
         let viewport = Viewport {
             x: panel_width as i32,
@@ -158,70 +165,71 @@ fn main() -> Result<(), Error> {
             height: frame_input.viewport.height,
         };
         change |= camera.set_viewport(viewport);
-        change |= control
-            .handle_events(&mut camera, &mut frame_input.events);
+        change |= control.handle_events(&mut camera, &mut frame_input.events);
 
         // Draw
         {
-            camera
-                .set_perspective_projection(degrees(fov), camera.z_near(), camera.z_far());
+            camera.set_perspective_projection(degrees(fov), camera.z_near(), camera.z_far());
             if shadows_enabled {
-                directional[0]
-                    .generate_shadow_map(1024, model.iter().map(|gm| &gm.geometry));
-                directional[1]
-                    .generate_shadow_map(1024, model.iter().map(|gm| &gm.geometry));
+                directional[0].generate_shadow_map(1024, model.iter().map(|gm| &gm.geometry));
+                directional[1].generate_shadow_map(1024, model.iter().map(|gm| &gm.geometry));
             }
 
-
-            let lights = &[
-                &ambient as &dyn Light,
-                &directional[0],
-                &directional[1],
-            ];
+            let lights = &[&ambient as &dyn Light, &directional[0], &directional[1]];
 
             // Light pass
             let screen = frame_input.screen();
             let target = screen.clear(ClearState::default());
             match debug_type {
-                DebugType::NORMAL => {
-                    target.render_with_material(
-                        &NormalMaterial::from_physical_material(&ph_material),
-                        &camera,
-                        model.iter().map(|gm| &gm.geometry),
-                        lights,
-                    )
-                }
+                DebugType::NORMAL => target.render_with_material(
+                    &NormalMaterial::from_physical_material(&ph_material),
+                    &camera,
+                    model.iter().map(|gm| &gm.geometry),
+                    lights,
+                ),
                 DebugType::DEPTH => {
                     let mut depth_material = DepthMaterial::default();
                     depth_material.max_distance = Some(depth_max);
-                    target.render_with_material(&depth_material, &camera, model.iter().map(|gm| &gm.geometry), lights)
-                }
-                DebugType::ORM => {
                     target.render_with_material(
-                        &ORMMaterial::from_physical_material(&ph_material),
+                        &depth_material,
                         &camera,
                         model.iter().map(|gm| &gm.geometry),
                         lights,
                     )
                 }
+                DebugType::ORM => target.render_with_material(
+                    &ORMMaterial::from_physical_material(&ph_material),
+                    &camera,
+                    model.iter().map(|gm| &gm.geometry),
+                    lights,
+                ),
                 DebugType::POSITION => {
                     let position_material = PositionMaterial::default();
-                    target.render_with_material(&position_material, &camera, model.iter().map(|gm| &gm.geometry), lights)
+                    target.render_with_material(
+                        &position_material,
+                        &camera,
+                        model.iter().map(|gm| &gm.geometry),
+                        lights,
+                    )
                 }
                 DebugType::UV => {
                     let uv_material = UVMaterial::default();
-                    target.render_with_material(&uv_material, &camera, model.iter().map(|gm| &gm.geometry), lights)
-                }
-                DebugType::COLOR => {
                     target.render_with_material(
-                        &ColorMaterial::from_physical_material(&ph_material),
+                        &uv_material,
                         &camera,
                         model.iter().map(|gm| &gm.geometry),
                         lights,
                     )
                 }
+                DebugType::COLOR => target.render_with_material(
+                    &ColorMaterial::from_physical_material(&ph_material),
+                    &camera,
+                    model.iter().map(|gm| &gm.geometry),
+                    lights,
+                ),
                 DebugType::NONE => target.render(&camera, &model, lights),
-            }.write(|| gui.render());
+            }
+            .write(|| gui.render());
         }
 
         let _ = change;
@@ -261,9 +269,7 @@ fn model_to_mesh(model: &Model) -> CpuMesh {
     let positions: Vec<Vec3> = model
         .vertices()
         .iter()
-        .map(|vertex| {
-            ((vertex.position + offset) * UNIT_SCALE * 10.0).into()
-        })
+        .map(|vertex| ((vertex.position + offset) * UNIT_SCALE * 10.0).into())
         .collect();
     let normals: Vec<Vec3> = model
         .vertices()

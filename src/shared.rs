@@ -1,10 +1,10 @@
 use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
+use cgmath::Vector3;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
-use cgmath::Vector3;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
