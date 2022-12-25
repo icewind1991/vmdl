@@ -1,7 +1,7 @@
 use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
-use cgmath::Vector3;
+use cgmath::{Deg, Euler, Rad, Vector3};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
@@ -95,12 +95,38 @@ pub struct Quaternion {
     pub w: f32,
 }
 
+impl From<Quaternion> for cgmath::Quaternion<f32> {
+    fn from(q: Quaternion) -> Self {
+        [q.x, q.y, q.z, q.w].into()
+    }
+}
+
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct RadianEuler {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+impl From<RadianEuler> for Euler<Rad<f32>> {
+    fn from(e: RadianEuler) -> Self {
+        Euler {
+            x: Rad(e.x),
+            y: Rad(e.y),
+            z: Rad(e.z),
+        }
+    }
+}
+
+impl From<RadianEuler> for Euler<Deg<f32>> {
+    fn from(e: RadianEuler) -> Self {
+        Euler {
+            x: Rad(e.x).into(),
+            y: Rad(e.y).into(),
+            z: Rad(e.z).into(),
+        }
+    }
 }
 
 /// Fixed length, null-terminated string
