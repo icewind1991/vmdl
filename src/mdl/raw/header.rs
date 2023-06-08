@@ -204,7 +204,7 @@ bitflags! {
 impl StudioHeader {
     pub fn header2_index(&self) -> Option<usize> {
         (self.studio_hdr2_index > 0)
-            .then(|| self.studio_hdr2_index)
+            .then_some(self.studio_hdr2_index)
             .and_then(|index| usize::try_from(index).ok())
     }
 

@@ -32,10 +32,10 @@ impl Vvd {
                 let fixup = fixup?;
                 let from = fixup.source_vertex_id as usize;
                 let to = (fixup.source_vertex_id.saturating_add(fixup.vertex_count)) as usize;
-                vertices.extend_from_slice(&source_vertices.get(from..to).ok_or_else(|| {
+                vertices.extend_from_slice(source_vertices.get(from..to).ok_or({
                     ModelError::OutOfBounds {
                         data: "source_vertices",
-                        offset: to as usize,
+                        offset: to,
                     }
                 })?);
             }

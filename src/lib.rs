@@ -55,7 +55,7 @@ impl Model {
             .body_parts
             .iter()
             .flat_map(|part| part.models.iter())
-            .flat_map(|model| model.lods.iter().next())
+            .flat_map(|model| model.lods.first())
             .flat_map(|lod| lod.meshes.iter());
 
         vtx_meshes
@@ -81,10 +81,10 @@ impl Model {
     }
 }
 
-fn read_indexes<'a, I: Iterator<Item = usize> + 'static, T: Readable>(
+fn read_indexes<I: Iterator<Item = usize> + 'static, T: Readable>(
     indexes: I,
-    data: &'a [u8],
-) -> impl Iterator<Item = Result<T, ModelError>> + 'a {
+    data: &[u8],
+) -> impl Iterator<Item = Result<T, ModelError>> + '_ {
     indexes
         .map(|index| {
             data.get(index..).ok_or_else(|| ModelError::OutOfBounds {

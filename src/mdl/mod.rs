@@ -26,7 +26,7 @@ impl Mdl {
             body_parts: header
                 .body_part_indexes()
                 .map(|index| {
-                    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
+                    let data = data.get(index..).ok_or(ModelError::OutOfBounds {
                         data: "BodyPart",
                         offset: index,
                     })?;
