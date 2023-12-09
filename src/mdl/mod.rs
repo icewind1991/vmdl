@@ -29,10 +29,12 @@ impl Mdl {
             .collect::<Result<Vec<TextureInfo>>>()?;
         let texture_dirs_indexes =
             read_relative_iter(data, header.texture_dir_indexes()).collect::<Result<Vec<u32>>>()?;
-        let texture_paths = read_relative::<String, _>(
+        let texture_paths = read_relative_iter::<String, _>(
             data,
             texture_dirs_indexes.into_iter().map(|index| index as usize),
-        )?;
+        )
+        .map(|path| path.map(|path| path.replace('\\', "/")))
+        .collect::<Result<Vec<_>>>()?;
 
         let bones = read_indexes(header.bone_indexes(), data).collect::<Result<_>>()?;
         Ok(Mdl {
@@ -98,6 +100,7 @@ impl ReadRelative for Model {
 
 #[derive(Debug, Clone)]
 pub struct Mesh {
+    pub material: i32,
     pub vertex_offset: i32,
 }
 
@@ -106,6 +109,7 @@ impl ReadRelative for Mesh {
 
     fn read(_data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Mesh {
+            material: header.material,
             vertex_offset: header.vertex_index,
         })
     }
@@ -121,7 +125,7 @@ impl ReadRelative for TextureInfo {
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(TextureInfo {
-            name: String::read(&data[header.name_index as usize..], ())?,
+            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
         })
     }
 }

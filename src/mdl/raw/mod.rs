@@ -124,7 +124,7 @@ pub struct ModelVertexData {
 #[repr(C)]
 #[allow(dead_code)]
 pub struct MeshHeader {
-    material: i32,
+    pub material: i32,
     model_index: i32,
     vertex_count: i32,
     pub vertex_index: i32,

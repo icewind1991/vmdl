@@ -1,12 +1,17 @@
+mod loader;
+
+use crate::loader::{LoadError, Loader};
 use std::env::args_os;
 use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use three_d::*;
+use tracing::error;
 use vmdl::mdl::Mdl;
 use vmdl::vtx::Vtx;
 use vmdl::vvd::Vvd;
 use vmdl::{Model, Vector};
+use vtf::vtf::VTF;
 
 #[derive(Debug, Error)]
 enum Error {
@@ -18,6 +23,10 @@ enum Error {
     IO(#[from] std::io::Error),
     #[error(transparent)]
     Render(#[from] RendererError),
+    #[error(transparent)]
+    Loader(#[from] LoadError),
+    #[error(transparent)]
+    Vtf(#[from] vtf::Error),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -34,6 +43,7 @@ pub enum DebugType {
 
 fn main() -> Result<(), Error> {
     miette::set_panic_hook();
+    tracing_subscriber::fmt::init();
 
     let mut args = args_os();
     let _ = args.next();
@@ -62,7 +72,9 @@ fn main() -> Result<(), Error> {
     let mut control = OrbitControl::new(*camera.target(), 1.0, 100.0);
     let mut gui = three_d::GUI::new(&context);
 
-    let cpu_mesh = model_to_mesh(&model);
+    let loader = Loader::new().expect("loader");
+
+    let cpu_model = model_to_model(&model, &loader);
     let ph_material = PhysicalMaterial {
         albedo: Color {
             r: 128,
@@ -72,23 +84,8 @@ fn main() -> Result<(), Error> {
         },
         ..Default::default()
     };
-    let material = CpuMaterial {
-        albedo: Color {
-            r: 128,
-            g: 128,
-            b: 128,
-            a: 255,
-        },
-        ..Default::default()
-    };
 
-    let model: three_d::Model<PhysicalMaterial> = three_d::Model::new(
-        &context,
-        &CpuModel {
-            materials: vec![material],
-            geometries: vec![cpu_mesh],
-        },
-    )?;
+    let model: three_d::Model<PhysicalMaterial> = three_d::Model::new(&context, &cpu_model)?;
 
     let mut directional = [
         DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(1.0, -1.0, 0.0)),
@@ -253,7 +250,7 @@ fn load(path: &Path) -> Result<Model, vmdl::ModelError> {
 // 1 hammer unit is ~1.905cm
 const UNIT_SCALE: f32 = 1.0 / (1.905 * 100.0);
 
-fn model_to_mesh(model: &Model) -> CpuMesh {
+fn model_to_model(model: &Model, loader: &Loader) -> CpuModel {
     let offset = model
         .vertices()
         .iter()
@@ -276,17 +273,89 @@ fn model_to_mesh(model: &Model) -> CpuMesh {
         .iter()
         .map(|vertex| vertex.normal.into())
         .collect();
-    let indices = Indices::U32(
-        model
-            .vertex_strip_indices()
-            .flat_map(|strip| strip.map(|index| index as u32))
-            .collect(),
-    );
+    let uvs: Vec<Vec2> = model
+        .vertices()
+        .iter()
+        .map(|vertex| vertex.texture_coordinates.into())
+        .collect();
 
-    CpuMesh {
-        positions: Positions::F32(positions),
-        normals: Some(normals),
-        indices,
-        ..Default::default()
+    let texture_names = model.textures();
+
+    let geometries = model
+        .meshes()
+        .map(|mesh| {
+            let indices = Indices::U32(
+                mesh.vertex_strip_indices()
+                    .flat_map(|strip| strip.map(|index| index as u32))
+                    .collect(),
+            );
+
+            CpuMesh {
+                positions: Positions::F32(positions.clone()),
+                normals: Some(normals.clone()),
+                uvs: Some(uvs.clone()),
+                material_name: Some(
+                    texture_names
+                        .get(mesh.material_index() as usize)
+                        .expect("texture out of bounds")
+                        .name
+                        .clone(),
+                ),
+                indices,
+                ..Default::default()
+            }
+        })
+        .collect();
+
+    let materials = model
+        .textures()
+        .iter()
+        .map(|texture| {
+            let dirs = model.texture_directories();
+            match load_texture(&texture.name, dirs, loader) {
+                Ok(texture) => CpuMaterial {
+                    albedo: Color::default(),
+                    name: texture.name.clone(),
+                    albedo_texture: Some(texture),
+                    ..Default::default()
+                },
+                Err(e) => {
+                    error!("{:#}", e);
+                    CpuMaterial {
+                        albedo: Color {
+                            r: 255,
+                            g: 0,
+                            b: 255,
+                            a: 255,
+                        },
+                        name: texture.name.clone(),
+                        ..Default::default()
+                    }
+                }
+            }
+        })
+        .collect();
+
+    CpuModel {
+        materials,
+        geometries,
     }
+}
+
+fn load_texture(name: &str, dirs: &[String], loader: &Loader) -> Result<CpuTexture, Error> {
+    let dirs = dirs
+        .iter()
+        .map(|dir| format!("materials/{}", dir))
+        .collect::<Vec<_>>();
+    let path = format!("{}.vtf", name);
+    let mut raw = loader.load_from_paths(&path, &dirs)?;
+    let vtf = VTF::read(&mut raw)?;
+    let image = vtf.highres_image.decode(0)?;
+    Ok(CpuTexture {
+        name: name.into(),
+        data: TextureData::RgbaU8(image.into_rgba8().pixels().map(|pixel| pixel.0).collect()),
+        height: vtf.header.height as u32,
+        width: vtf.header.width as u32,
+        ..CpuTexture::default()
+    })
 }

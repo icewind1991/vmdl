@@ -16,7 +16,15 @@ fn main() -> Result<(), vmdl::ModelError> {
     let _vtx = Vtx::read(&data)?;
     let data = fs::read(path.with_extension("vvd"))?;
     let _vvd = Vvd::read(&data)?;
-    dbg!(mdl.textures, mdl.texture_paths);
+
+    let models = mdl
+        .body_parts
+        .iter()
+        .flat_map(|part| part.models.iter())
+        .flat_map(|model| model.meshes.iter())
+        .map(|mesh| mesh.material)
+        .collect::<Vec<_>>();
+    dbg!(mdl.textures, models, mdl.texture_paths);
 
     // let model = Model::from_parts(mdl, vtx, vvd);
     // for strip in model.vertex_strips() {

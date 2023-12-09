@@ -6,6 +6,7 @@ pub mod vtx;
 pub mod vvd;
 
 pub use crate::mdl::Mdl;
+use crate::mdl::TextureInfo;
 pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
@@ -35,6 +36,44 @@ impl Model {
 
     pub fn vertices(&self) -> &[Vertex] {
         &self.vvd.vertices
+    }
+
+    pub fn texture_directories(&self) -> &[String] {
+        &self.mdl.texture_paths
+    }
+
+    pub fn textures(&self) -> &[TextureInfo] {
+        &self.mdl.textures
+    }
+
+    pub fn meshes(&self) -> impl Iterator<Item = Mesh> {
+        let mdl_meshes = self
+            .mdl
+            .body_parts
+            .iter()
+            .flat_map(|part| part.models.iter())
+            .flat_map(|model| {
+                model
+                    .meshes
+                    .iter()
+                    .map(|mesh| (mesh, model.vertex_offset as usize))
+            });
+
+        let vtx_meshes = self
+            .vtx
+            .body_parts
+            .iter()
+            .flat_map(|part| part.models.iter())
+            .flat_map(|model| model.lods.first())
+            .flat_map(|lod| lod.meshes.iter());
+
+        mdl_meshes
+            .zip(vtx_meshes)
+            .map(|((mdl, model_vertex_offset), vtx)| Mesh {
+                model_vertex_offset,
+                mdl,
+                vtx,
+            })
     }
 
     pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
@@ -78,6 +117,32 @@ impl Model {
                         })
                 })
             })
+    }
+}
+
+pub struct Mesh<'a> {
+    model_vertex_offset: usize,
+    mdl: &'a mdl::Mesh,
+    vtx: &'a vtx::Mesh,
+}
+
+impl<'a> Mesh<'a> {
+    pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
+        let mdl_offset = self.mdl.vertex_offset as usize + self.model_vertex_offset;
+        self.vtx.strip_groups.iter().flat_map(move |strip_group| {
+            let group_indices = &strip_group.indices;
+            let vertices = &strip_group.vertices;
+            strip_group.strips.iter().map(move |strip| {
+                strip
+                    .indices()
+                    .map(move |index| group_indices[index] as usize)
+                    .map(move |index| vertices[index].original_mesh_vertex_id as usize + mdl_offset)
+            })
+        })
+    }
+
+    pub fn material_index(&self) -> i32 {
+        self.mdl.material
     }
 }
 

@@ -19,6 +19,12 @@ three-d = { version = "0.14.0", features = ["egui-gui"] }
 miette = { version = "5.5.0", features = ["fancy"] }
 criterion = "0.4.0"
 iai = "0.1"
+steamlocate = "1.2.1"
+vbsp = { version = "0.2.0", git = "https://github.com/icewind1991/vbsp" }
+vtf = { version = "0.1.5", git = "https://github.com/roman901/vtf-rs", rev = "a346cb6d85c2766fe7e30b0a70b6f38e67c3a6c9" }
+vpk = { version = "0.1.4", git = "https://github.com/icewind1991/vpk-rs", branch = "perf" }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 
 [[bench]]
 name = "parse"
