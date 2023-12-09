@@ -16,7 +16,7 @@ fn main() -> Result<(), vmdl::ModelError> {
     let _vtx = Vtx::read(&data)?;
     let data = fs::read(path.with_extension("vvd"))?;
     let _vvd = Vvd::read(&data)?;
-    dbg!(mdl.body_parts);
+    dbg!(mdl.textures, mdl.texture_paths);
 
     // let model = Model::from_parts(mdl, vtx, vvd);
     // for strip in model.vertex_strips() {

@@ -1,4 +1,4 @@
-use crate::{index_range, Vector};
+use crate::{index_range, ReadableRelative, Vector};
 use bytemuck::{Pod, Zeroable};
 use std::mem::size_of;
 
@@ -51,6 +51,8 @@ pub struct VertexFileFixup {
     pub vertex_count: i32,
 }
 
+impl ReadableRelative for VertexFileFixup {}
+
 #[derive(Debug, Clone, Zeroable, Pod, Copy)]
 #[repr(C)]
 pub struct Vertex {
@@ -59,6 +61,8 @@ pub struct Vertex {
     pub normal: Vector,
     pub texture_coordinates: [f32; 2],
 }
+
+impl ReadableRelative for Vertex {}
 
 static_assertions::const_assert_eq!(size_of::<Vertex>(), 48);
 

@@ -1,4 +1,4 @@
-use crate::{index_range, Pod};
+use crate::{index_range, Pod, ReadableRelative};
 use bitflags::bitflags;
 use bytemuck::Zeroable;
 use std::mem::size_of;
@@ -214,5 +214,7 @@ pub struct Vertex {
     pub original_mesh_vertex_id: u16,
     pub bone_id: [u8; 3],
 }
+
+impl ReadableRelative for Vertex {}
 
 static_assertions::const_assert_eq!(size_of::<Vertex>(), 9);

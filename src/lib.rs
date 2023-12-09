@@ -141,10 +141,28 @@ trait ReadRelative: Sized {
     fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError>;
 }
 
-impl<T: Readable> ReadRelative for T {
+trait ReadableRelative: Readable {}
+
+impl ReadableRelative for u8 {}
+impl ReadableRelative for u16 {}
+impl ReadableRelative for u32 {}
+impl ReadableRelative for i8 {}
+impl ReadableRelative for i16 {}
+impl ReadableRelative for i32 {}
+
+impl<T: ReadableRelative> ReadRelative for T {
     type Header = T;
 
     fn read(_data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
         Ok(header)
+    }
+}
+
+impl ReadRelative for String {
+    type Header = ();
+
+    fn read(data: &[u8], _header: Self::Header) -> Result<Self, ModelError> {
+        let bytes = data.iter().copied().take_while(|byte| *byte != 0).collect();
+        String::from_utf8(bytes).map_err(ModelError::from)
     }
 }

@@ -1,3 +1,4 @@
+use std::string::FromUtf8Error;
 use thiserror::Error;
 
 #[non_exhaustive]
@@ -19,4 +20,16 @@ pub enum StringError {
     NonUTF8(#[from] std::str::Utf8Error),
     #[error("String is not null-terminated")]
     NotNullTerminated,
+}
+
+impl From<FromUtf8Error> for StringError {
+    fn from(value: FromUtf8Error) -> Self {
+        StringError::NonUTF8(value.utf8_error())
+    }
+}
+
+impl From<FromUtf8Error> for ModelError {
+    fn from(value: FromUtf8Error) -> Self {
+        StringError::NonUTF8(value.utf8_error()).into()
+    }
 }

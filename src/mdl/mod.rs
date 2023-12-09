@@ -4,9 +4,12 @@ pub use raw::header::*;
 pub use raw::header2::*;
 use std::mem::size_of;
 
-use crate::mdl::raw::{BodyPartHeader, Bone, MeshHeader, ModelHeader};
+use crate::mdl::raw::{BodyPartHeader, Bone, MeshHeader, MeshTexture, ModelHeader};
 use crate::vvd::Vertex;
-use crate::{read_indexes, read_relative, FixedString, ModelError, ReadRelative, Readable};
+use crate::{
+    read_indexes, read_relative, read_relative_iter, FixedString, ModelError, ReadRelative,
+    Readable,
+};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -15,11 +18,22 @@ pub struct Mdl {
     pub header: StudioHeader,
     pub bones: Vec<Bone>,
     pub body_parts: Vec<BodyPart>,
+    pub textures: Vec<TextureInfo>,
+    pub texture_paths: Vec<String>,
 }
 
 impl Mdl {
     pub fn read(data: &[u8]) -> Result<Self> {
         let header = <StudioHeader as Readable>::read(data)?;
+        let textures = read_relative_iter(data, header.texture_indexes())
+            .collect::<Result<Vec<TextureInfo>>>()?;
+        let texture_dirs_indexes =
+            read_relative_iter(data, header.texture_dir_indexes()).collect::<Result<Vec<u32>>>()?;
+        let texture_paths = read_relative::<String, _>(
+            data,
+            texture_dirs_indexes.into_iter().map(|index| index as usize),
+        )?;
+
         let bones = read_indexes(header.bone_indexes(), data).collect::<Result<_>>()?;
         Ok(Mdl {
             bones,
@@ -34,6 +48,8 @@ impl Mdl {
                     BodyPart::read(data, header)
                 })
                 .collect::<Result<_>>()?,
+            textures,
+            texture_paths,
             header,
         })
     }
@@ -91,6 +107,21 @@ impl ReadRelative for Mesh {
     fn read(_data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(Mesh {
             vertex_offset: header.vertex_index,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TextureInfo {
+    pub name: String,
+}
+
+impl ReadRelative for TextureInfo {
+    type Header = MeshTexture;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
+        Ok(TextureInfo {
+            name: String::read(&data[header.name_index as usize..], ())?,
         })
     }
 }

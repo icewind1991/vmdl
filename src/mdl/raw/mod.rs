@@ -146,3 +146,18 @@ pub struct MeshVertexData {
     model_vertex_data: i32,
     lod_vertex_count: [i32; 8],
 }
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+#[allow(dead_code)]
+pub struct MeshTexture {
+    pub name_index: i32, // relative offset to this struct
+    pub flags: i32,
+    pub used: i32,
+    _padding: i32,
+    pub material_ptr: i32,
+    pub client_material_ptr: i32,
+    _padding2: [i32; 10],
+}
+
+static_assertions::const_assert_eq!(size_of::<MeshTexture>(), 16 * 4);

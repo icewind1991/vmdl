@@ -229,11 +229,19 @@ impl StudioHeader {
     }
 
     pub fn texture_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.texture_offset, self.texture_count, 1)
+        index_range(
+            self.texture_offset,
+            self.texture_count,
+            size_of::<MeshTexture>(),
+        )
     }
 
     pub fn texture_dir_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.texture_dir_offset, self.texture_dir_count, 1)
+        index_range(
+            self.texture_dir_offset,
+            self.texture_dir_count,
+            size_of::<u32>(),
+        )
     }
 
     pub fn body_part_indexes(&self) -> impl Iterator<Item = usize> {
