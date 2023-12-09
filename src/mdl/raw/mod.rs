@@ -143,6 +143,6 @@ pub struct MeshHeader {
 #[allow(dead_code)]
 pub struct MeshVertexData {
     // these are pointers?
-    model_vertext_data: i32,
+    model_vertex_data: i32,
     lod_vertex_count: [i32; 8],
 }
