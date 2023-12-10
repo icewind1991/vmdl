@@ -276,10 +276,14 @@ fn model_to_model(model: &Model, loader: &Loader) -> CpuModel {
     let uvs: Vec<Vec2> = model
         .vertices()
         .iter()
-        .map(|vertex| vertex.texture_coordinates.into())
+        .map(|vertex| Vec2 {
+            x: vertex.texture_coordinates[0],
+            y: vertex.texture_coordinates[1],
+        })
         .collect();
 
     let texture_names = model.textures();
+    let skin = dbg!(&model.skin_tables()[1]);
 
     let geometries = model
         .meshes()
@@ -289,18 +293,17 @@ fn model_to_model(model: &Model, loader: &Loader) -> CpuModel {
                     .flat_map(|strip| strip.map(|index| index as u32))
                     .collect(),
             );
+            let texture_index = skin[mesh.material_index() as usize] as usize;
 
             CpuMesh {
                 positions: Positions::F32(positions.clone()),
                 normals: Some(normals.clone()),
                 uvs: Some(uvs.clone()),
-                material_name: Some(
-                    texture_names
-                        .get(mesh.material_index() as usize)
-                        .expect("texture out of bounds")
-                        .name
-                        .clone(),
-                ),
+                material_name: Some(dbg!(texture_names
+                    .get(texture_index)
+                    .expect("texture out of bounds")
+                    .name
+                    .clone())),
                 indices,
                 ..Default::default()
             }

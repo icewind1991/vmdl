@@ -24,7 +24,7 @@ fn main() -> Result<(), vmdl::ModelError> {
         .flat_map(|model| model.meshes.iter())
         .map(|mesh| mesh.material)
         .collect::<Vec<_>>();
-    dbg!(mdl.textures, models, mdl.texture_paths);
+    dbg!(mdl.textures, models, mdl.skin_table);
 
     // let model = Model::from_parts(mdl, vtx, vvd);
     // for strip in model.vertex_strips() {

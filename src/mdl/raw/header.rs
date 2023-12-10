@@ -60,8 +60,8 @@ pub struct StudioHeader {
 
     // Each skin-family assigns a texture-id to a skin location
     pub skin_reference_count: i32,
-    pub skin_r_family_count: i32,
-    pub skin_reference_index: i32,
+    pub skin_family_count: i32,
+    pub skin_reference_offset: i32,
 
     // mstudiobodyparts_t
     body_part_count: i32,
@@ -241,6 +241,14 @@ impl StudioHeader {
             self.texture_dir_offset,
             self.texture_dir_count,
             size_of::<u32>(),
+        )
+    }
+
+    pub fn skin_reference_indexes(&self) -> impl Iterator<Item = usize> {
+        index_range(
+            self.skin_reference_offset,
+            self.skin_reference_count * self.skin_family_count,
+            size_of::<u16>(),
         )
     }
 

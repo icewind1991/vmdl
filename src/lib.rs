@@ -46,6 +46,10 @@ impl Model {
         &self.mdl.textures
     }
 
+    pub fn skin_tables(&self) -> &[Vec<u16>] {
+        &self.mdl.skin_table
+    }
+
     pub fn meshes(&self) -> impl Iterator<Item = Mesh> {
         let mdl_meshes = self
             .mdl
