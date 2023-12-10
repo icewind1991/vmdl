@@ -141,6 +141,7 @@ fn main() -> Result<(), Error> {
                     ui.radio_value(&mut debug_type, DebugType::COLOR, "Color");
                     ui.radio_value(&mut debug_type, DebugType::DEPTH, "Depth");
                     ui.radio_value(&mut debug_type, DebugType::ORM, "ORM");
+                    ui.radio_value(&mut debug_type, DebugType::UV, "UV");
 
                     ui.label("View options");
                     ui.add(Slider::new(&mut depth_max, 1.0..=30.0).text("Depth max"));

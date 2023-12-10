@@ -2837,7 +2837,7 @@ dependencies = [
 [[package]]
 name = "vtf"
 version = "0.1.5"
-source = "git+https://github.com/roman901/vtf-rs?rev=a346cb6d85c2766fe7e30b0a70b6f38e67c3a6c9#a346cb6d85c2766fe7e30b0a70b6f38e67c3a6c9"
+source = "git+https://github.com/roman901/vtf-rs?rev=55670df#55670df9acd8463d9e8a78d1217d1570385f3582"
 dependencies = [
  "byteorder 1.5.0",
  "err-derive",
