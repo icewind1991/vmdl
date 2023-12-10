@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
     let mut args = args_os();
     let _ = args.next();
     let path = PathBuf::from(args.next().expect("No demo file provided"));
-    let model = load(&path).unwrap();
+    let source_model = load(&path).unwrap();
 
     let window = Window::new(WindowSettings {
         title: path.display().to_string(),
@@ -73,8 +73,10 @@ fn main() -> Result<(), Error> {
     let mut gui = three_d::GUI::new(&context);
 
     let loader = Loader::new().expect("loader");
+    let skin_count = source_model.skin_tables().count();
 
-    let cpu_model = model_to_model(&model, &loader);
+    let cpu_models = (0..skin_count).map(|skin| model_to_model(&source_model, &loader, skin));
+
     let ph_material = PhysicalMaterial {
         albedo: Color {
             r: 128,
@@ -85,7 +87,9 @@ fn main() -> Result<(), Error> {
         ..Default::default()
     };
 
-    let model: three_d::Model<PhysicalMaterial> = three_d::Model::new(&context, &cpu_model)?;
+    let models: Vec<three_d::Model<PhysicalMaterial>> = cpu_models
+        .map(|cpu_model| three_d::Model::new(&context, &cpu_model).expect("failed to load model"))
+        .collect();
 
     let mut directional = [
         DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(1.0, -1.0, 0.0)),
@@ -103,8 +107,10 @@ fn main() -> Result<(), Error> {
     let mut depth_max = 30.0;
     let mut fov = 60.0;
     let mut debug_type = DebugType::NONE;
+    let mut skin_index = 0;
 
     window.render_loop(move |mut frame_input| {
+        let model = &models[skin_index];
         let mut change = frame_input.first_frame;
         let mut panel_width = frame_input.viewport.width;
         change |= gui.update(
@@ -144,6 +150,7 @@ fn main() -> Result<(), Error> {
                     ui.radio_value(&mut debug_type, DebugType::UV, "UV");
 
                     ui.label("View options");
+                    ui.add(Slider::new(&mut skin_index, 0..=(skin_count - 1)).text("Skin"));
                     ui.add(Slider::new(&mut depth_max, 1.0..=30.0).text("Depth max"));
                     ui.add(Slider::new(&mut fov, 45.0..=90.0).text("FOV"));
 
@@ -225,7 +232,7 @@ fn main() -> Result<(), Error> {
                     model.iter().map(|gm| &gm.geometry),
                     lights,
                 ),
-                DebugType::NONE => target.render(&camera, &model, lights),
+                DebugType::NONE => target.render(&camera, model, lights),
             }
             .write(|| gui.render());
         }
@@ -251,7 +258,7 @@ fn load(path: &Path) -> Result<Model, vmdl::ModelError> {
 // 1 hammer unit is ~1.905cm
 const UNIT_SCALE: f32 = 1.0 / (1.905 * 100.0);
 
-fn model_to_model(model: &Model, loader: &Loader) -> CpuModel {
+fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
     let offset = model
         .vertices()
         .iter()
@@ -264,7 +271,7 @@ fn model_to_model(model: &Model, loader: &Loader) -> CpuModel {
         z: 0.0,
     };
 
-    let skin = model.skin_tables().next().unwrap();
+    let skin = model.skin_tables().nth(skin).unwrap();
 
     let geometries = model
         .meshes()
