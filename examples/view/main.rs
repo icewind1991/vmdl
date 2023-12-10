@@ -263,48 +263,33 @@ fn model_to_model(model: &Model, loader: &Loader) -> CpuModel {
         z: 0.0,
     };
 
-    let positions: Vec<Vec3> = model
-        .vertices()
-        .iter()
-        .map(|vertex| ((vertex.position + offset) * UNIT_SCALE * 10.0).into())
-        .collect();
-    let normals: Vec<Vec3> = model
-        .vertices()
-        .iter()
-        .map(|vertex| vertex.normal.into())
-        .collect();
-    let uvs: Vec<Vec2> = model
-        .vertices()
-        .iter()
-        .map(|vertex| Vec2 {
-            x: vertex.texture_coordinates[0],
-            y: vertex.texture_coordinates[1],
-        })
-        .collect();
-
-    let texture_names = model.textures();
-    let skin = dbg!(&model.skin_tables()[1]);
+    let skin = model.skin_tables().next().unwrap();
 
     let geometries = model
         .meshes()
         .map(|mesh| {
-            let indices = Indices::U32(
-                mesh.vertex_strip_indices()
-                    .flat_map(|strip| strip.map(|index| index as u32))
-                    .collect(),
-            );
-            let texture_index = skin[mesh.material_index() as usize] as usize;
+            let texture = skin
+                .texture(mesh.material_index())
+                .expect("texture out of bounds");
+
+            let positions: Vec<Vec3> = mesh
+                .vertices()
+                .map(|vertex| ((vertex.position + offset) * UNIT_SCALE * 10.0).into())
+                .collect();
+            let normals: Vec<Vec3> = mesh.vertices().map(|vertex| vertex.normal.into()).collect();
+            let uvs: Vec<Vec2> = mesh
+                .vertices()
+                .map(|vertex| Vec2 {
+                    x: vertex.texture_coordinates[0],
+                    y: vertex.texture_coordinates[1],
+                })
+                .collect();
 
             CpuMesh {
-                positions: Positions::F32(positions.clone()),
-                normals: Some(normals.clone()),
-                uvs: Some(uvs.clone()),
-                material_name: Some(dbg!(texture_names
-                    .get(texture_index)
-                    .expect("texture out of bounds")
-                    .name
-                    .clone())),
-                indices,
+                positions: Positions::F32(positions),
+                normals: Some(normals),
+                uvs: Some(uvs),
+                material_name: Some(texture.into()),
                 ..Default::default()
             }
         })

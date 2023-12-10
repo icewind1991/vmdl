@@ -20,7 +20,7 @@ pub struct Mdl {
     pub body_parts: Vec<BodyPart>,
     pub textures: Vec<TextureInfo>,
     pub texture_paths: Vec<String>,
-    pub skin_table: Vec<Vec<u16>>,
+    pub skin_table: Vec<u16>,
 }
 
 impl Mdl {
@@ -37,13 +37,7 @@ impl Mdl {
         .map(|path| path.map(|path| path.replace('\\', "/")))
         .collect::<Result<Vec<_>>>()?;
 
-        let raw_skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
-        let skin_table = raw_skin_table
-            .chunks(header.skin_reference_count as usize)
-            .map(|chunk| chunk.into())
-            .collect();
-
-        dbg!(raw_skin_table);
+        let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
 
         let bones = read_indexes(header.bone_indexes(), data).collect::<Result<_>>()?;
         Ok(Mdl {

@@ -29,11 +29,6 @@ impl Model {
         Model { mdl, vtx, vvd }
     }
 
-    pub fn vertex_strips(&self) -> impl Iterator<Item = impl Iterator<Item = &'_ Vertex> + '_> {
-        self.vertex_strip_indices()
-            .map(|strip| strip.map(|index| &self.vvd.vertices[index]))
-    }
-
     pub fn vertices(&self) -> &[Vertex] {
         &self.vvd.vertices
     }
@@ -46,8 +41,14 @@ impl Model {
         &self.mdl.textures
     }
 
-    pub fn skin_tables(&self) -> &[Vec<u16>] {
-        &self.mdl.skin_table
+    pub fn skin_tables(&self) -> impl Iterator<Item = SkinTable> {
+        self.mdl
+            .skin_table
+            .chunks(self.mdl.header.skin_reference_count as usize)
+            .map(|chunk| SkinTable {
+                table: chunk,
+                textures: &self.mdl.textures,
+            })
     }
 
     pub fn meshes(&self) -> impl Iterator<Item = Mesh> {
@@ -75,62 +76,36 @@ impl Model {
             .zip(vtx_meshes)
             .map(|((mdl, model_vertex_offset), vtx)| Mesh {
                 model_vertex_offset,
+                vertices: self.vertices(),
                 mdl,
                 vtx,
             })
     }
+}
 
-    pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
-        let mesh_vertex_offsets = self
-            .mdl
-            .body_parts
-            .iter()
-            .flat_map(|part| part.models.iter())
-            .flat_map(|model| {
-                model
-                    .meshes
-                    .iter()
-                    .map(move |mesh| (mesh.vertex_offset + model.vertex_offset) as usize)
-            });
+pub struct SkinTable<'a> {
+    textures: &'a [TextureInfo],
+    table: &'a [u16],
+}
 
-        let vtx_meshes = self
-            .vtx
-            .body_parts
-            .iter()
-            .flat_map(|part| part.models.iter())
-            .flat_map(|model| model.lods.first())
-            .flat_map(|lod| lod.meshes.iter());
-
-        vtx_meshes
-            .zip(mesh_vertex_offsets)
-            .flat_map(|(vtx_mesh, vertex_offset)| {
-                vtx_mesh
-                    .strip_groups
-                    .iter()
-                    .map(move |strip_group| (strip_group, vertex_offset))
-            })
-            .flat_map(|(strip_group, mesh_vertex_offset)| {
-                let group_indices = &strip_group.indices;
-                let vertices = &strip_group.vertices;
-                strip_group.strips.iter().map(move |strip| {
-                    strip
-                        .indices()
-                        .map(move |index| group_indices[index] as usize)
-                        .map(move |index| {
-                            vertices[index].original_mesh_vertex_id as usize + mesh_vertex_offset
-                        })
-                })
-            })
+impl<'a> SkinTable<'a> {
+    pub fn texture(&self, index: i32) -> Option<&'a str> {
+        let texture_index = self.table.get(index as usize)?;
+        self.textures
+            .get(*texture_index as usize)
+            .map(|info| info.name.as_str())
     }
 }
 
 pub struct Mesh<'a> {
     model_vertex_offset: usize,
+    vertices: &'a [Vertex],
     mdl: &'a mdl::Mesh,
     vtx: &'a vtx::Mesh,
 }
 
 impl<'a> Mesh<'a> {
+    /// Vertex indices into the model's vertex list
     pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
         let mdl_offset = self.mdl.vertex_offset as usize + self.model_vertex_offset;
         self.vtx.strip_groups.iter().flat_map(move |strip_group| {
@@ -147,6 +122,11 @@ impl<'a> Mesh<'a> {
 
     pub fn material_index(&self) -> i32 {
         self.mdl.material
+    }
+
+    pub fn vertices(&self) -> impl Iterator<Item = &'a Vertex> + '_ {
+        self.vertex_strip_indices()
+            .flat_map(|strip| strip.map(|index| &self.vertices[index]))
     }
 }
 
