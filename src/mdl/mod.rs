@@ -26,7 +26,7 @@ pub struct Mdl {
 impl Mdl {
     pub fn read(data: &[u8]) -> Result<Self> {
         let header = <StudioHeader as Readable>::read(data)?;
-        let textures = read_relative_iter(data, header.texture_indexes())
+        let mut textures = read_relative_iter(data, header.texture_indexes())
             .collect::<Result<Vec<TextureInfo>>>()?;
         let texture_dirs_indexes =
             read_relative_iter(data, header.texture_dir_indexes()).collect::<Result<Vec<u32>>>()?;
@@ -36,6 +36,9 @@ impl Mdl {
         )
         .map(|path| path.map(|path| path.replace('\\', "/")))
         .collect::<Result<Vec<_>>>()?;
+        for texture in textures.iter_mut() {
+            texture.search_paths = texture_paths.clone();
+        }
 
         let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
 
@@ -122,6 +125,7 @@ impl ReadRelative for Mesh {
 #[derive(Debug, Clone)]
 pub struct TextureInfo {
     pub name: String,
+    pub search_paths: Vec<String>,
 }
 
 impl ReadRelative for TextureInfo {
@@ -130,6 +134,7 @@ impl ReadRelative for TextureInfo {
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(TextureInfo {
             name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            search_paths: Vec::new(),
         })
     }
 }
