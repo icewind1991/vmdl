@@ -1,6 +1,8 @@
 mod loader;
+mod material;
 
 use crate::loader::{LoadError, Loader};
+use crate::material::load_material_fallback;
 use std::env::args_os;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,10 +13,9 @@ use vmdl::mdl::Mdl;
 use vmdl::vtx::Vtx;
 use vmdl::vvd::Vvd;
 use vmdl::{Model, Vector};
-use vtf::vtf::VTF;
 
 #[derive(Debug, Error)]
-enum Error {
+pub enum Error {
     #[error(transparent)]
     Three(#[from] Box<dyn std::error::Error>),
     #[error(transparent)]
@@ -27,6 +28,8 @@ enum Error {
     Loader(#[from] LoadError),
     #[error(transparent)]
     Vtf(#[from] vtf::Error),
+    #[error("{0}")]
+    Other(&'static str),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -306,52 +309,11 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
     let materials = model
         .textures()
         .iter()
-        .map(|texture| {
-            let dirs = model.texture_directories();
-            match load_texture(&texture.name, dirs, loader) {
-                Ok(texture) => CpuMaterial {
-                    albedo: Color::default(),
-                    name: texture.name.clone(),
-                    albedo_texture: Some(texture),
-                    ..Default::default()
-                },
-                Err(e) => {
-                    error!("{:#}", e);
-                    CpuMaterial {
-                        albedo: Color {
-                            r: 255,
-                            g: 0,
-                            b: 255,
-                            a: 255,
-                        },
-                        name: texture.name.clone(),
-                        ..Default::default()
-                    }
-                }
-            }
-        })
+        .map(|texture| load_material_fallback(&texture.name, model.texture_directories(), loader))
         .collect();
 
     CpuModel {
         materials,
         geometries,
     }
-}
-
-fn load_texture(name: &str, dirs: &[String], loader: &Loader) -> Result<CpuTexture, Error> {
-    let dirs = dirs
-        .iter()
-        .map(|dir| format!("materials/{}", dir))
-        .collect::<Vec<_>>();
-    let path = format!("{}.vtf", name);
-    let mut raw = loader.load_from_paths(&path, &dirs)?;
-    let vtf = VTF::read(&mut raw)?;
-    let image = vtf.highres_image.decode(0)?;
-    Ok(CpuTexture {
-        name: name.into(),
-        data: TextureData::RgbaU8(image.into_rgba8().pixels().map(|pixel| pixel.0).collect()),
-        height: vtf.header.height as u32,
-        width: vtf.header.width as u32,
-        ..CpuTexture::default()
-    })
 }
