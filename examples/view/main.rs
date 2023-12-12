@@ -295,12 +295,14 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
                     y: vertex.texture_coordinates[1],
                 })
                 .collect();
+            let tangents: Vec<Vec4> = mesh.tangents().map(|tangent| tangent.into()).collect();
 
             CpuMesh {
                 positions: Positions::F32(positions),
                 normals: Some(normals),
                 uvs: Some(uvs),
                 material_name: Some(texture.into()),
+                tangents: Some(tangents),
                 ..Default::default()
             }
         })

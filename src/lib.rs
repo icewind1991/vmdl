@@ -33,6 +33,10 @@ impl Model {
         &self.vvd.vertices
     }
 
+    pub fn tangents(&self) -> &[[f32; 4]] {
+        &self.vvd.tangents
+    }
+
     pub fn texture_directories(&self) -> &[String] {
         &self.mdl.texture_paths
     }
@@ -77,6 +81,7 @@ impl Model {
             .map(|((mdl, model_vertex_offset), vtx)| Mesh {
                 model_vertex_offset,
                 vertices: self.vertices(),
+                tangents: self.tangents(),
                 mdl,
                 vtx,
             })
@@ -100,6 +105,7 @@ impl<'a> SkinTable<'a> {
 pub struct Mesh<'a> {
     model_vertex_offset: usize,
     vertices: &'a [Vertex],
+    tangents: &'a [[f32; 4]],
     mdl: &'a mdl::Mesh,
     vtx: &'a vtx::Mesh,
 }
@@ -127,6 +133,11 @@ impl<'a> Mesh<'a> {
     pub fn vertices(&self) -> impl Iterator<Item = &'a Vertex> + '_ {
         self.vertex_strip_indices()
             .flat_map(|strip| strip.map(|index| &self.vertices[index]))
+    }
+
+    pub fn tangents(&self) -> impl Iterator<Item = [f32; 4]> + '_ {
+        self.vertex_strip_indices()
+            .flat_map(|strip| strip.map(|index| self.tangents[index]))
     }
 }
 
@@ -198,6 +209,11 @@ impl ReadableRelative for u32 {}
 impl ReadableRelative for i8 {}
 impl ReadableRelative for i16 {}
 impl ReadableRelative for i32 {}
+impl ReadableRelative for f32 {}
+impl<T: ReadableRelative + Pod> ReadableRelative for [T; 1] {}
+impl<T: ReadableRelative + Pod> ReadableRelative for [T; 2] {}
+impl<T: ReadableRelative + Pod> ReadableRelative for [T; 3] {}
+impl<T: ReadableRelative + Pod> ReadableRelative for [T; 4] {}
 
 impl<T: ReadableRelative> ReadRelative for T {
     type Header = T;

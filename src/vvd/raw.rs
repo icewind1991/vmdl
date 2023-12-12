@@ -13,7 +13,6 @@ pub struct VvdHeader {
     fixup_count: i32,
     fixup_index: i32,
     vertex_index: i32,
-    #[allow(dead_code)]
     tangent_index: i32,
 }
 
@@ -36,6 +35,18 @@ impl VvdHeader {
                 self.vertex_index,
                 self.lod_vertex_count[lod as usize],
                 size_of::<Vertex>(),
+            ))
+        } else {
+            None
+        }
+    }
+
+    pub fn tangent_indexes(&self, lod: i32) -> Option<impl Iterator<Item = usize>> {
+        if lod < self.lod_count {
+            Some(index_range(
+                self.tangent_index,
+                self.lod_vertex_count[lod as usize],
+                size_of::<[f32; 4]>(),
             ))
         } else {
             None

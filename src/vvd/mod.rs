@@ -11,6 +11,7 @@ type Result<T> = std::result::Result<T, ModelError>;
 pub struct Vvd {
     pub header: VvdHeader,
     pub vertices: Vec<Vertex>,
+    pub tangents: Vec<[f32; 4]>,
 }
 
 impl Vvd {
@@ -23,10 +24,18 @@ impl Vvd {
                 offset: 0,
             })?,
         )?;
-        let vertices = if !header.has_fixups() {
-            source_vertices
+        let source_tangents = read_relative(
+            data,
+            header.tangent_indexes(0).ok_or(ModelError::OutOfBounds {
+                data: "model_lod",
+                offset: 0,
+            })?,
+        )?;
+        let (tangents, vertices) = if !header.has_fixups() {
+            (source_tangents, source_vertices)
         } else {
             let mut vertices = Vec::new();
+            let mut tangents = Vec::new();
             for fixup in read_relative_iter::<'_, VertexFileFixup, _>(data, header.fixup_indexes())
             {
                 let fixup = fixup?;
@@ -38,9 +47,22 @@ impl Vvd {
                         offset: to,
                     }
                 })?);
+                tangents.extend_from_slice(source_tangents.get(from..to).ok_or({
+                    ModelError::OutOfBounds {
+                        data: "source_tangents",
+                        offset: to,
+                    }
+                })?);
             }
-            vertices
+            (tangents, vertices)
         };
-        Ok(Vvd { vertices, header })
+
+        debug_assert!(tangents.len() == vertices.len());
+
+        Ok(Vvd {
+            vertices,
+            header,
+            tangents,
+        })
     }
 }
