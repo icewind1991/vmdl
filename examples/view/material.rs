@@ -1,5 +1,6 @@
 use crate::loader::Loader;
 use crate::Error;
+use std::str::FromStr;
 use steamy_vdf::{Entry, Table};
 use three_d::{Color, CpuMaterial, CpuTexture, TextureData};
 use tracing::error;
@@ -28,6 +29,10 @@ pub fn load_material_fallback(name: &str, search_dirs: &[String], loader: &Loade
     }
 }
 
+fn get_path(vmt: &Entry, name: &str) -> Option<String> {
+    Some(vmt.lookup(name)?.as_str()?.replace('\\', "/"))
+}
+
 pub fn load_material(
     name: &str,
     search_dirs: &[String],
@@ -45,7 +50,7 @@ pub fn load_material(
     let path = format!("{}.vmt", name.to_ascii_lowercase().trim_end_matches(".vmt"));
     let raw = loader.load_from_paths(&path, &dirs)?;
 
-    let vmt = parse_vdf(raw)?;
+    let vmt = parse_vdf(&raw)?;
     let vmt = resolve_vmt_patch(vmt, loader)?;
 
     let material_type = vmt
@@ -69,40 +74,50 @@ pub fn load_material(
     let table = vmt
         .values()
         .next()
-        .ok_or(Error::Other("empty vmt"))?
-        .as_table()
-        .ok_or(Error::Other("vmt not a table"))?;
-    let base_texture = table
-        .iter()
-        .find_map(|(key, value)| (key.to_ascii_lowercase() == "$basetexture").then_some(value))
-        .or_else(|| {
-            table
-                .iter()
-                .find_map(|(key, value)| (key.to_ascii_lowercase() == "eyes_dx8").then_some(value))
-                .and_then(|eyes| eyes.as_table())
-                .and_then(|eyes| {
-                    eyes.iter().find_map(|(key, value)| {
-                        (key.to_ascii_lowercase() == "$basetexture").then_some(value)
-                    })
-                })
-        })
-        .ok_or(Error::Other("no $basetexture"))?
-        .as_value()
-        .ok_or(Error::Other("$basetexture not a value"))?
-        .to_string()
-        .to_ascii_lowercase()
-        .replace('\\', "/")
-        .replace('\t', "/t");
-    let texture = load_texture(base_texture.as_str(), loader)?;
+        .cloned()
+        .ok_or(Error::Other("empty vmt"))?;
+    let base_texture = get_path(&table, "$basetexture").ok_or(Error::Other("no $basetexture"))?;
+
+    let translucent = table
+        .lookup("$translucent")
+        .map(|val| val.as_str() == Some("1"))
+        .unwrap_or_default();
+    let glass = table
+        .lookup("$surfaceprop")
+        .map(|val| val.as_str() == Some("glass"))
+        .unwrap_or_default();
+    let alpha_test = table
+        .lookup("$alphatest")
+        .map(|val| val.as_str() == Some("1"))
+        .unwrap_or_default();
+    let texture = load_texture(
+        base_texture.as_str(),
+        loader,
+        translucent | glass | alpha_test,
+    )?;
+
+    let alpha_cutout = table
+        .lookup("$alphatestreference")
+        .and_then(Entry::as_str)
+        .and_then(|val| f32::from_str(val).ok())
+        .unwrap_or(1.0);
+
+    let bump_map = get_path(&table, "$bumpmap")
+        .map(|path| load_texture(&path, loader, true).ok())
+        .flatten();
+
     Ok(CpuMaterial {
         name: name.into(),
         albedo: Color::WHITE,
         albedo_texture: Some(texture),
+        alpha_cutout: alpha_test.then_some(alpha_cutout),
+        normal_texture: bump_map,
         ..CpuMaterial::default()
     })
 }
 
-fn parse_vdf(bytes: Vec<u8>) -> Result<Table, Error> {
+fn parse_vdf(bytes: &[u8]) -> Result<Table, Error> {
+    let bytes = bytes.to_ascii_lowercase();
     let mut reader = steamy_vdf::Reader::from(bytes.as_slice());
     Table::load(&mut reader).map_err(|e| {
         println!("{}", String::from_utf8_lossy(&bytes));
@@ -115,17 +130,22 @@ fn parse_vdf(bytes: Vec<u8>) -> Result<Table, Error> {
     })
 }
 
-fn load_texture(name: &str, loader: &Loader) -> Result<CpuTexture, Error> {
+fn load_texture(name: &str, loader: &Loader, alpha: bool) -> Result<CpuTexture, Error> {
     let path = format!(
         "materials/{}.vtf",
-        name.trim_end_matches(".vtf").trim_start_matches("/")
+        name.trim_end_matches(".vtf").trim_start_matches('/')
     );
     let mut raw = loader.load(&path)?;
     let vtf = VTF::read(&mut raw)?;
     let image = vtf.highres_image.decode(0)?;
+    let texture_data = if alpha {
+        TextureData::RgbaU8(image.into_rgba8().pixels().map(|pixel| pixel.0).collect())
+    } else {
+        TextureData::RgbU8(image.into_rgb8().pixels().map(|pixel| pixel.0).collect())
+    };
     Ok(CpuTexture {
         name: name.into(),
-        data: TextureData::RgbaU8(image.into_rgba8().pixels().map(|pixel| pixel.0).collect()),
+        data: texture_data,
         height: vtf.header.height as u32,
         width: vtf.header.width as u32,
         ..CpuTexture::default()
@@ -151,7 +171,7 @@ fn resolve_vmt_patch(vmt: Table, loader: &Loader) -> Result<Table, Error> {
         let included_raw = loader.load(&include.to_ascii_lowercase())?;
 
         // todo actually patch
-        parse_vdf(included_raw)
+        parse_vdf(&included_raw)
     } else {
         Ok(vmt)
     }

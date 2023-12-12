@@ -295,7 +295,7 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
                     y: vertex.texture_coordinates[1],
                 })
                 .collect();
-            let tangents: Vec<Vec4> = mesh.tangents().map(|tangent| tangent.into()).collect();
+            let tangents: Vec<Vec4> = mesh.tangents().map(Vec4::from).collect();
 
             CpuMesh {
                 positions: Positions::F32(positions),
