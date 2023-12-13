@@ -290,10 +290,7 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
             let normals: Vec<Vec3> = mesh.vertices().map(|vertex| vertex.normal.into()).collect();
             let uvs: Vec<Vec2> = mesh
                 .vertices()
-                .map(|vertex| Vec2 {
-                    x: vertex.texture_coordinates[0],
-                    y: vertex.texture_coordinates[1],
-                })
+                .map(|vertex| vertex.texture_coordinates.into())
                 .collect();
             let tangents: Vec<Vec4> = mesh.tangents().map(Vec4::from).collect();
 
