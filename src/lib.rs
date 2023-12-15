@@ -65,7 +65,7 @@ impl Model {
                 model
                     .meshes
                     .iter()
-                    .map(|mesh| (mesh, model.vertex_offset as usize))
+                    .map(|mesh| (mesh, model.name.as_str(), model.vertex_offset as usize))
             });
 
         let vtx_meshes = self
@@ -78,8 +78,9 @@ impl Model {
 
         mdl_meshes
             .zip(vtx_meshes)
-            .map(|((mdl, model_vertex_offset), vtx)| Mesh {
+            .map(|((mdl, model_name, model_vertex_offset), vtx)| Mesh {
                 model_vertex_offset,
+                model_name,
                 vertices: self.vertices(),
                 tangents: self.tangents(),
                 mdl,
@@ -108,6 +109,7 @@ impl<'a> SkinTable<'a> {
 }
 
 pub struct Mesh<'a> {
+    pub model_name: &'a str,
     model_vertex_offset: usize,
     vertices: &'a [Vertex],
     tangents: &'a [[f32; 4]],
