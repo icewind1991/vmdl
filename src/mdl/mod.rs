@@ -125,6 +125,7 @@ impl ReadRelative for Mesh {
 #[derive(Debug, Clone)]
 pub struct TextureInfo {
     pub name: String,
+    pub name_index: i32,
     pub search_paths: Vec<String>,
 }
 
@@ -134,6 +135,7 @@ impl ReadRelative for TextureInfo {
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(TextureInfo {
             name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            name_index: header.name_index,
             search_paths: Vec::new(),
         })
     }

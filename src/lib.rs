@@ -100,6 +100,11 @@ impl<'a> SkinTable<'a> {
             .get(*texture_index as usize)
             .map(|info| info.name.as_str())
     }
+
+    pub fn texture_index(&self, index: i32) -> Option<usize> {
+        let texture_index = self.table.get(index as usize)?;
+        Some(*texture_index as usize)
+    }
 }
 
 pub struct Mesh<'a> {
