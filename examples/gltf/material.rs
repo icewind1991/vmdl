@@ -28,10 +28,16 @@ pub fn load_material_fallback(name: &str, search_dirs: &[String], loader: &Loade
 pub struct MaterialData {
     pub name: String,
     pub color: [u8; 4],
-    pub texture: Option<DynamicImage>,
+    pub texture: Option<TextureData>,
     pub alpha_test: Option<f32>,
-    pub bump_map: Option<DynamicImage>,
+    pub bump_map: Option<TextureData>,
     pub translucent: bool,
+}
+
+#[derive(Debug)]
+pub struct TextureData {
+    pub name: String,
+    pub image: DynamicImage,
 }
 
 pub fn load_material(
@@ -85,14 +91,20 @@ pub fn load_material(
         .and_then(|val| f32::from_str(val).ok())
         .unwrap_or(1.0);
 
-    let bump_map = get_path(&table, "$bumpmap")
-        .map(|path| load_texture(&path, loader, true).ok())
-        .flatten();
+    let bump_map = get_path(&table, "$bumpmap").and_then(|path| {
+        Some(TextureData {
+            image: load_texture(&path, loader, true).ok()?,
+            name: path,
+        })
+    });
 
     Ok(MaterialData {
         color: [255; 4],
         name: name.into(),
-        texture: Some(texture),
+        texture: Some(TextureData {
+            name: base_texture,
+            image: texture,
+        }),
         bump_map,
         alpha_test: alpha_test.then_some(alpha_cutout),
         translucent: translucent | glass | alpha_test,

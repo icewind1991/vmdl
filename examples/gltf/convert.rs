@@ -1,4 +1,4 @@
-use crate::material::MaterialData;
+use crate::material::{MaterialData, TextureData};
 use bytemuck::{offset_of, Pod, Zeroable};
 use gltf_json::accessor::{ComponentType, GenericComponentType, Type};
 use gltf_json::buffer::{Target, View};
@@ -9,7 +9,7 @@ use gltf_json::texture::Info;
 use gltf_json::validation::Checked::Valid;
 use gltf_json::{Accessor, Extras, Image, Index, Material, Mesh, Texture, Value};
 use image::png::PngEncoder;
-use image::{DynamicImage, GenericImageView};
+use image::GenericImageView;
 use std::mem::size_of;
 use vmdl::{Model, SkinTable};
 
@@ -219,15 +219,9 @@ pub fn push_material(
     images: &mut Vec<Image>,
     material: MaterialData,
 ) -> Material {
-    let textures_start = textures.len() as u32;
-
-    let texture = material
+    let texture_index = material
         .texture
-        .map(|tex| push_texture(buffer, views, images, tex));
-    let texture_index = texture.map(|texture| {
-        textures.push(texture);
-        textures_start
-    });
+        .map(|tex| push_or_get_texture(buffer, views, textures, images, tex));
 
     let alpha_mode = match (material.translucent, material.alpha_test.is_some()) {
         (true, _) => AlphaMode::Blend,
@@ -248,7 +242,7 @@ pub fn push_material(
                 material.color.map(|channel| channel as f32 / 255.0),
             ),
             base_color_texture: texture_index.map(|index| Info {
-                index: Index::new(index),
+                index,
                 tex_coord: 0,
                 extensions: None,
                 extras: Extras::default(),
@@ -259,12 +253,38 @@ pub fn push_material(
     }
 }
 
+fn push_or_get_texture(
+    buffer: &mut Vec<u8>,
+    views: &mut Vec<View>,
+    textures: &mut Vec<Texture>,
+    images: &mut Vec<Image>,
+    texture: TextureData,
+) -> Index<Texture> {
+    match get_texture_index(textures, &texture.name) {
+        Some(index) => index,
+        None => {
+            let index = textures.len() as u32;
+            textures.push(push_texture(buffer, views, images, texture));
+            Index::new(index)
+        }
+    }
+}
+
+fn get_texture_index(textures: &[Texture], name: &str) -> Option<Index<Texture>> {
+    textures
+        .iter()
+        .enumerate()
+        .find_map(|(i, tex)| (tex.name.as_deref() == Some(name)).then_some(i))
+        .map(|i| Index::new(i as u32))
+}
+
 fn push_texture(
     buffer: &mut Vec<u8>,
     views: &mut Vec<View>,
     images: &mut Vec<Image>,
-    image: DynamicImage,
+    texture: TextureData,
 ) -> Texture {
+    let image = texture.image;
     let buffer_start = buffer.len() as u32;
     let view_start = views.len() as u32;
     let image_start = images.len() as u32;
@@ -291,7 +311,7 @@ fn push_texture(
         byte_stride: None,
         extensions: Default::default(),
         extras: Default::default(),
-        name: None,
+        name: Some(texture.name.clone()),
         target: None,
     };
 
@@ -300,7 +320,7 @@ fn push_texture(
     let image = Image {
         buffer_view: Some(Index::new(view_start)),
         mime_type: Some(MimeType("image/png".into())),
-        name: None,
+        name: Some(texture.name.clone()),
         uri: None,
         extensions: None,
         extras: Default::default(),
@@ -308,7 +328,7 @@ fn push_texture(
     images.push(image);
 
     Texture {
-        name: None,
+        name: Some(texture.name),
         sampler: None,
         source: Index::new(image_start),
         extensions: None,
