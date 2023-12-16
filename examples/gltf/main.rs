@@ -4,11 +4,11 @@ mod loader;
 
 use gltf_json as json;
 
-use std::{fs, mem};
+use std::fs;
 
-use crate::convert::model_to_vertices;
+use crate::convert::push_model;
 pub use error::Error;
-use json::validation::Checked::Valid;
+use gltf_json::Index;
 use std::borrow::Cow;
 use std::env::args_os;
 use std::io::Write;
@@ -24,53 +24,41 @@ enum Output {
     Binary,
 }
 
-#[derive(Copy, Clone, Debug)]
-#[repr(C)]
-pub struct Vertex {
-    position: [f32; 3],
-    uv: [f32; 2],
-    normal: [f32; 3],
-}
-
-/// Calculate bounding coordinates of a list of vertices, used for the clipping distance of the model
-fn bounding_coords(points: &[Vertex]) -> ([f32; 3], [f32; 3]) {
-    let mut min = [f32::MAX, f32::MAX, f32::MAX];
-    let mut max = [f32::MIN, f32::MIN, f32::MIN];
-
-    for point in points {
-        let p = point.position;
-        for i in 0..3 {
-            min[i] = f32::min(min[i], p[i]);
-            max[i] = f32::max(max[i], p[i]);
-        }
-    }
-    (min, max)
-}
-
 fn align_to_multiple_of_four(n: &mut u32) {
     *n = (*n + 3) & !3;
 }
 
-fn to_padded_byte_vector<T>(vec: Vec<T>) -> Vec<u8> {
-    let byte_length = vec.len() * mem::size_of::<T>();
-    let byte_capacity = vec.capacity() * mem::size_of::<T>();
-    let alloc = vec.into_boxed_slice();
-    let ptr = Box::<[T]>::into_raw(alloc) as *mut u8;
-    let mut new_vec = unsafe { Vec::from_raw_parts(ptr, byte_length, byte_capacity) };
-    while new_vec.len() % 4 != 0 {
-        new_vec.push(0); // pad to multiple of four bytes
+fn pad_byte_vector(mut vec: Vec<u8>) -> Vec<u8> {
+    while vec.len() % 4 != 0 {
+        vec.push(0); // pad to multiple of four bytes
     }
-    new_vec
+    vec
 }
 
 fn export(model: Model, output: Output) {
-    let vertices = model_to_vertices(&model);
+    let mut buffer = Vec::new();
+    let mut views = Vec::new();
+    let mut accessors = Vec::new();
 
-    let (min, max) = bounding_coords(&vertices);
+    let mesh = push_model(&mut buffer, &mut views, &mut accessors, &model);
 
-    let buffer_length = (vertices.len() * mem::size_of::<Vertex>()) as u32;
-    let buffer = json::Buffer {
-        byte_length: buffer_length,
+    let node = json::Node {
+        camera: None,
+        children: None,
+        extensions: Default::default(),
+        extras: Default::default(),
+        matrix: None,
+        mesh: Some(Index::new(0)),
+        name: None,
+        rotation: None,
+        scale: None,
+        translation: None,
+        skin: None,
+        weights: None,
+    };
+
+    let g_buffer = json::Buffer {
+        byte_length: buffer.len() as u32,
         extensions: Default::default(),
         extras: Default::default(),
         name: None,
@@ -80,118 +68,18 @@ fn export(model: Model, output: Output) {
             None
         },
     };
-    let buffer_view = json::buffer::View {
-        buffer: json::Index::new(0),
-        byte_length: buffer.byte_length,
-        byte_offset: None,
-        byte_stride: Some(mem::size_of::<Vertex>() as u32),
-        extensions: Default::default(),
-        extras: Default::default(),
-        name: None,
-        target: Some(Valid(json::buffer::Target::ArrayBuffer)),
-    };
-    let positions = json::Accessor {
-        buffer_view: Some(json::Index::new(0)),
-        byte_offset: Some(0),
-        count: vertices.len() as u32,
-        component_type: Valid(json::accessor::GenericComponentType(
-            json::accessor::ComponentType::F32,
-        )),
-        extensions: Default::default(),
-        extras: Default::default(),
-        type_: Valid(json::accessor::Type::Vec3),
-        min: Some(json::Value::from(Vec::from(min))),
-        max: Some(json::Value::from(Vec::from(max))),
-        name: None,
-        normalized: false,
-        sparse: None,
-    };
-    let uvs = json::Accessor {
-        buffer_view: Some(json::Index::new(0)),
-        byte_offset: Some((3 * mem::size_of::<f32>()) as u32),
-        count: vertices.len() as u32,
-        component_type: Valid(json::accessor::GenericComponentType(
-            json::accessor::ComponentType::F32,
-        )),
-        extensions: Default::default(),
-        extras: Default::default(),
-        type_: Valid(json::accessor::Type::Vec3),
-        min: None,
-        max: None,
-        name: None,
-        normalized: false,
-        sparse: None,
-    };
-    let normals = json::Accessor {
-        buffer_view: Some(json::Index::new(0)),
-        byte_offset: Some((5 * mem::size_of::<f32>()) as u32),
-        count: vertices.len() as u32,
-        component_type: Valid(json::accessor::GenericComponentType(
-            json::accessor::ComponentType::F32,
-        )),
-        extensions: Default::default(),
-        extras: Default::default(),
-        type_: Valid(json::accessor::Type::Vec3),
-        min: None,
-        max: None,
-        name: None,
-        normalized: false,
-        sparse: None,
-    };
-
-    let primitive = json::mesh::Primitive {
-        attributes: {
-            let mut map = std::collections::BTreeMap::new();
-            map.insert(Valid(json::mesh::Semantic::Positions), json::Index::new(0));
-            map.insert(
-                Valid(json::mesh::Semantic::TexCoords(0)),
-                json::Index::new(1),
-            );
-            map.insert(Valid(json::mesh::Semantic::Normals), json::Index::new(2));
-            map
-        },
-        extensions: Default::default(),
-        extras: Default::default(),
-        indices: None,
-        material: None,
-        mode: Valid(json::mesh::Mode::Triangles),
-        targets: None,
-    };
-
-    let mesh = json::Mesh {
-        extensions: Default::default(),
-        extras: Default::default(),
-        name: None,
-        primitives: vec![primitive],
-        weights: None,
-    };
-
-    let node = json::Node {
-        camera: None,
-        children: None,
-        extensions: Default::default(),
-        extras: Default::default(),
-        matrix: None,
-        mesh: Some(json::Index::new(0)),
-        name: None,
-        rotation: None,
-        scale: None,
-        translation: None,
-        skin: None,
-        weights: None,
-    };
 
     let root = json::Root {
-        accessors: vec![positions, uvs, normals],
-        buffers: vec![buffer],
-        buffer_views: vec![buffer_view],
+        accessors,
+        buffers: vec![g_buffer],
+        buffer_views: views,
         meshes: vec![mesh],
         nodes: vec![node],
         scenes: vec![json::Scene {
             extensions: Default::default(),
             extras: Default::default(),
             name: None,
-            nodes: vec![json::Index::new(0)],
+            nodes: vec![Index::new(0)],
         }],
         ..Default::default()
     };
@@ -203,7 +91,7 @@ fn export(model: Model, output: Output) {
             let writer = fs::File::create("triangle/triangle.gltf").expect("I/O error");
             json::serialize::to_writer_pretty(writer, &root).expect("Serialization error");
 
-            let bin = to_padded_byte_vector(vertices);
+            let bin = pad_byte_vector(buffer);
             let mut writer = fs::File::create("triangle/buffer0.bin").expect("I/O error");
             writer.write_all(&bin).expect("I/O error");
         }
@@ -215,9 +103,9 @@ fn export(model: Model, output: Output) {
                 header: gltf::binary::Header {
                     magic: *b"glTF",
                     version: 2,
-                    length: json_offset + buffer_length,
+                    length: json_offset + buffer.len() as u32,
                 },
-                bin: Some(Cow::Owned(to_padded_byte_vector(vertices))),
+                bin: Some(Cow::Owned(pad_byte_vector(buffer))),
                 json: Cow::Owned(json_string.into_bytes()),
             };
             let writer = std::fs::File::create("output.glb").expect("I/O error");

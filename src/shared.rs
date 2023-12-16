@@ -130,7 +130,7 @@ impl From<RadianEuler> for Euler<Deg<f32>> {
 }
 
 /// Fixed length, null-terminated string
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, Copy)]
 pub struct FixedString<const LEN: usize>(ArrayString<LEN>);
 
 impl<const LEN: usize> TryFrom<[u8; LEN]> for FixedString<LEN> {

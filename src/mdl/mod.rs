@@ -15,6 +15,7 @@ type Result<T> = std::result::Result<T, ModelError>;
 
 #[derive(Debug, Clone)]
 pub struct Mdl {
+    pub name: FixedString<64>,
     pub header: StudioHeader,
     pub bones: Vec<Bone>,
     pub body_parts: Vec<BodyPart>,
@@ -26,6 +27,7 @@ pub struct Mdl {
 impl Mdl {
     pub fn read(data: &[u8]) -> Result<Self> {
         let header = <StudioHeader as Readable>::read(data)?;
+        let name = header.name.try_into()?;
         let mut textures = read_relative_iter(data, header.texture_indexes())
             .collect::<Result<Vec<TextureInfo>>>()?;
         let texture_dirs_indexes =
@@ -44,6 +46,7 @@ impl Mdl {
 
         let bones = read_indexes(header.bone_indexes(), data).collect::<Result<_>>()?;
         Ok(Mdl {
+            name,
             bones,
             body_parts: header
                 .body_part_indexes()
