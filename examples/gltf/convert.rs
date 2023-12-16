@@ -151,11 +151,11 @@ pub fn push_primitive(
         buffer: Index::new(0),
         byte_length,
         byte_offset: Some(buffer_start),
-        byte_stride: Some(size_of::<u32>() as u32),
+        byte_stride: None,
         extensions: Default::default(),
         extras: Default::default(),
         name: None,
-        target: Some(Valid(Target::ArrayBuffer)),
+        target: Some(Valid(Target::ElementArrayBuffer)),
     };
     views.push(view);
 
