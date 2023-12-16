@@ -144,10 +144,10 @@ impl Strip {
             Either::Left((0..self.indices.len()).flat_map(move |i| {
                 let cw = i & 1;
                 let idx = offset + i;
-                [idx, idx + 1 - cw, idx + 2 - cw].into_iter()
+                [idx, idx + 1 - cw, idx + 2 - cw].into_iter().rev()
             }))
         } else {
-            Either::Right(self.indices.clone())
+            Either::Right(self.indices.clone().rev())
         }
     }
 }
