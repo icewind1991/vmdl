@@ -119,7 +119,7 @@ pub struct Mesh<'a> {
 
 impl<'a> Mesh<'a> {
     /// Vertex indices into the model's vertex list
-    pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + '_> {
+    pub fn vertex_strip_indices(&self) -> impl Iterator<Item = impl Iterator<Item = usize> + 'a> {
         let mdl_offset = self.mdl.vertex_offset as usize + self.model_vertex_offset;
         self.vtx.strip_groups.iter().flat_map(move |strip_group| {
             let group_indices = &strip_group.indices;
@@ -137,7 +137,7 @@ impl<'a> Mesh<'a> {
         self.mdl.material
     }
 
-    pub fn vertices(&self) -> impl Iterator<Item = &'a Vertex> + '_ {
+    pub fn vertices(&self) -> impl Iterator<Item = &'a Vertex> + 'a {
         self.vertex_strip_indices()
             .flat_map(|strip| strip.map(|index| &self.vertices[index]))
     }
