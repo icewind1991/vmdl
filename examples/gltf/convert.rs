@@ -1,11 +1,17 @@
+use crate::material::MaterialData;
 use bytemuck::{offset_of, Pod, Zeroable};
 use gltf_json::accessor::{ComponentType, GenericComponentType, Type};
 use gltf_json::buffer::{Target, View};
+use gltf_json::image::MimeType;
+use gltf_json::material::{AlphaCutoff, AlphaMode, PbrBaseColorFactor, PbrMetallicRoughness};
 use gltf_json::mesh::{Mode, Primitive, Semantic};
+use gltf_json::texture::Info;
 use gltf_json::validation::Checked::Valid;
-use gltf_json::{Accessor, Index, Mesh, Value};
+use gltf_json::{Accessor, Extras, Image, Index, Material, Mesh, Texture, Value};
+use image::png::PngEncoder;
+use image::{DynamicImage, GenericImageView};
 use std::mem::size_of;
-use vmdl::Model;
+use vmdl::{Model, SkinTable};
 
 #[derive(Copy, Clone, Debug, Default, Zeroable, Pod)]
 #[repr(C)]
@@ -110,13 +116,14 @@ pub fn push_model(
     views: &mut Vec<View>,
     accessors: &mut Vec<Accessor>,
     model: &Model,
+    skin: &SkinTable,
 ) -> Mesh {
     let accessor_start = accessors.len() as u32;
     push_vertices(buffer, views, accessors, model);
 
     let primitives = model
         .meshes()
-        .map(|mesh| push_primitive(buffer, views, accessors, &mesh, accessor_start))
+        .map(|mesh| push_primitive(buffer, views, accessors, &mesh, accessor_start, skin))
         .collect();
 
     Mesh {
@@ -134,6 +141,7 @@ pub fn push_primitive(
     accessors: &mut Vec<Accessor>,
     mesh: &vmdl::Mesh,
     vertex_accessor_start: u32,
+    skin: &SkinTable,
 ) -> Primitive {
     let buffer_start = buffer.len() as u32;
     let view_start = views.len() as u32;
@@ -195,8 +203,115 @@ pub fn push_primitive(
         extensions: Default::default(),
         extras: Default::default(),
         indices: Some(Index::new(accessor_start)),
-        material: None,
+        material: Some(Index::new(
+            skin.texture_index(mesh.material_index())
+                .expect("skin out of bounds") as u32,
+        )),
         mode: Valid(Mode::Triangles),
         targets: None,
+    }
+}
+
+pub fn push_material(
+    buffer: &mut Vec<u8>,
+    views: &mut Vec<View>,
+    textures: &mut Vec<Texture>,
+    images: &mut Vec<Image>,
+    material: MaterialData,
+) -> Material {
+    let textures_start = textures.len() as u32;
+
+    let texture = material
+        .texture
+        .map(|tex| push_texture(buffer, views, images, tex));
+    let texture_index = texture.map(|texture| {
+        textures.push(texture);
+        textures_start
+    });
+
+    let alpha_mode = match (material.translucent, material.alpha_test.is_some()) {
+        (true, _) => AlphaMode::Blend,
+        (false, true) => AlphaMode::Mask,
+        _ => AlphaMode::Opaque,
+    };
+
+    Material {
+        name: Some(material.name),
+        alpha_cutoff: material
+            .alpha_test
+            .map(AlphaCutoff)
+            .filter(|_| alpha_mode == AlphaMode::Mask),
+        double_sided: true,
+        alpha_mode: Valid(alpha_mode),
+        pbr_metallic_roughness: PbrMetallicRoughness {
+            base_color_factor: PbrBaseColorFactor(
+                material.color.map(|channel| channel as f32 / 255.0),
+            ),
+            base_color_texture: texture_index.map(|index| Info {
+                index: Index::new(index),
+                tex_coord: 0,
+                extensions: None,
+                extras: Extras::default(),
+            }),
+            ..PbrMetallicRoughness::default()
+        },
+        ..Material::default()
+    }
+}
+
+fn push_texture(
+    buffer: &mut Vec<u8>,
+    views: &mut Vec<View>,
+    images: &mut Vec<Image>,
+    image: DynamicImage,
+) -> Texture {
+    let buffer_start = buffer.len() as u32;
+    let view_start = views.len() as u32;
+    let image_start = images.len() as u32;
+
+    let mut png_buffer = Vec::new();
+    let encoder = PngEncoder::new(&mut png_buffer);
+    encoder
+        .encode(
+            image.as_bytes(),
+            image.width(),
+            image.height(),
+            image.color(),
+        )
+        .expect("failed to encode");
+
+    buffer.extend_from_slice(&png_buffer);
+
+    let byte_length = buffer.len() as u32 - buffer_start;
+
+    let view = View {
+        buffer: Index::new(0),
+        byte_length,
+        byte_offset: Some(buffer_start),
+        byte_stride: None,
+        extensions: Default::default(),
+        extras: Default::default(),
+        name: None,
+        target: None,
+    };
+
+    views.push(view);
+
+    let image = Image {
+        buffer_view: Some(Index::new(view_start)),
+        mime_type: Some(MimeType("image/png".into())),
+        name: None,
+        uri: None,
+        extensions: None,
+        extras: Default::default(),
+    };
+    images.push(image);
+
+    Texture {
+        name: None,
+        sampler: None,
+        source: Index::new(image_start),
+        extensions: None,
+        extras: Default::default(),
     }
 }

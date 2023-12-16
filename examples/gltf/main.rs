@@ -1,12 +1,15 @@
 mod convert;
 mod error;
 mod loader;
+mod material;
 
 use gltf_json as json;
 
 use std::fs;
 
-use crate::convert::push_model;
+use crate::convert::{push_material, push_model};
+use crate::loader::Loader;
+use crate::material::load_material_fallback;
 pub use error::Error;
 use gltf_json::Index;
 use std::borrow::Cow;
@@ -35,12 +38,32 @@ fn pad_byte_vector(mut vec: Vec<u8>) -> Vec<u8> {
     vec
 }
 
-fn export(model: Model, output: Output) {
+fn export(model: Model, output: Output) -> Result<(), Error> {
     let mut buffer = Vec::new();
     let mut views = Vec::new();
     let mut accessors = Vec::new();
+    let mut textures = Vec::new();
+    let mut images = Vec::new();
+    let skin = model.skin_tables().next().unwrap();
 
-    let mesh = push_model(&mut buffer, &mut views, &mut accessors, &model);
+    let loader = Loader::new()?;
+
+    let mesh = push_model(&mut buffer, &mut views, &mut accessors, &model, &skin);
+
+    let materials = model
+        .textures()
+        .iter()
+        .map(|tex| load_material_fallback(&tex.name, &tex.search_paths, &loader))
+        .map(|material| {
+            push_material(
+                &mut buffer,
+                &mut views,
+                &mut textures,
+                &mut images,
+                material,
+            )
+        })
+        .collect();
 
     let node = json::Node {
         camera: None,
@@ -81,6 +104,9 @@ fn export(model: Model, output: Output) {
             name: None,
             nodes: vec![Index::new(0)],
         }],
+        materials,
+        images,
+        textures,
         ..Default::default()
     };
 
@@ -112,6 +138,7 @@ fn export(model: Model, output: Output) {
             glb.to_writer(writer).expect("glTF binary output error");
         }
     }
+    Ok(())
 }
 
 fn load(path: &Path) -> Result<Model, vmdl::ModelError> {
@@ -129,6 +156,6 @@ fn main() -> Result<(), Error> {
     let path = PathBuf::from(args_os().nth(1).expect("No model file provided"));
     let source_model = load(&path)?;
 
-    export(source_model, Output::Binary);
+    export(source_model, Output::Binary)?;
     Ok(())
 }
