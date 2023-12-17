@@ -11,7 +11,7 @@ use gltf_json::{Accessor, Extras, Image, Index, Material, Mesh, Texture, Value};
 use image::png::PngEncoder;
 use image::GenericImageView;
 use std::mem::size_of;
-use vmdl::{Model, SkinTable};
+use vmdl::Model;
 
 #[derive(Copy, Clone, Debug, Default, Zeroable, Pod)]
 #[repr(C)]
@@ -116,14 +116,13 @@ pub fn push_model(
     views: &mut Vec<View>,
     accessors: &mut Vec<Accessor>,
     model: &Model,
-    skin: &SkinTable,
 ) -> Mesh {
     let accessor_start = accessors.len() as u32;
     push_vertices(buffer, views, accessors, model);
 
     let primitives = model
         .meshes()
-        .map(|mesh| push_primitive(buffer, views, accessors, &mesh, accessor_start, skin))
+        .map(|mesh| push_primitive(buffer, views, accessors, &mesh, accessor_start))
         .collect();
 
     Mesh {
@@ -141,7 +140,6 @@ pub fn push_primitive(
     accessors: &mut Vec<Accessor>,
     mesh: &vmdl::Mesh,
     vertex_accessor_start: u32,
-    skin: &SkinTable,
 ) -> Primitive {
     let buffer_start = buffer.len() as u32;
     let view_start = views.len() as u32;
@@ -203,10 +201,7 @@ pub fn push_primitive(
         extensions: Default::default(),
         extras: Default::default(),
         indices: Some(Index::new(accessor_start)),
-        material: Some(Index::new(
-            skin.texture_index(mesh.material_index())
-                .expect("skin out of bounds") as u32,
-        )),
+        material: Some(Index::new(mesh.material_index() as u32)),
         mode: Valid(Mode::Triangles),
         targets: None,
     }

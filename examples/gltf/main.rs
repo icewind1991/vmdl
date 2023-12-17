@@ -15,6 +15,7 @@ pub use error::Error;
 use gltf_json::Index;
 use main_error::MainResult;
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use vmdl::Model;
 
@@ -43,11 +44,14 @@ fn export(model: Model, skin: u16, target: PathBuf) -> Result<(), Error> {
 
     let loader = Loader::new()?;
 
-    let mesh = push_model(&mut buffer, &mut views, &mut accessors, &model, &skin);
+    let mesh = push_model(&mut buffer, &mut views, &mut accessors, &model);
 
-    let materials = model
-        .textures()
-        .iter()
+    let used_materials: BTreeSet<_> = model.meshes().map(|mesh| mesh.material_index()).collect();
+
+    let materials = used_materials
+        .into_iter()
+        .map(|mat_index| skin.texture_index(mat_index).unwrap())
+        .map(|tex_index| &model.textures()[tex_index])
         .map(|tex| load_material_fallback(&tex.name, &tex.search_paths, &loader))
         .map(|material| {
             push_material(
