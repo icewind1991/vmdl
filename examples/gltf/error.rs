@@ -15,4 +15,6 @@ pub enum Error {
     Vtf(#[from] vtf::Error),
     #[error("{0}")]
     Other(&'static str),
+    #[error("Skin index out of bounds: {0}, model only has {1} skins")]
+    SkinOutOfBounds(u16, u16),
 }

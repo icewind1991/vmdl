@@ -10,22 +10,13 @@ use std::fs;
 use crate::convert::{push_material, push_model};
 use crate::loader::Loader;
 use crate::material::load_material_fallback;
+use clap::Parser;
 pub use error::Error;
 use gltf_json::Index;
+use main_error::MainResult;
 use std::borrow::Cow;
-use std::env::args_os;
-use std::io::Write;
 use std::path::PathBuf;
 use vmdl::Model;
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-enum Output {
-    /// Output standard glTF.
-    Standard,
-
-    /// Output binary glTF.
-    Binary,
-}
 
 fn align_to_multiple_of_four(n: &mut u32) {
     *n = (*n + 3) & !3;
@@ -38,13 +29,17 @@ fn pad_byte_vector(mut vec: Vec<u8>) -> Vec<u8> {
     vec
 }
 
-fn export(model: Model, output: Output) -> Result<(), Error> {
+fn export(model: Model, skin: u16, target: PathBuf) -> Result<(), Error> {
     let mut buffer = Vec::new();
     let mut views = Vec::new();
     let mut accessors = Vec::new();
     let mut textures = Vec::new();
     let mut images = Vec::new();
-    let skin = model.skin_tables().next().unwrap();
+
+    let skin = model
+        .skin_tables()
+        .nth(skin as usize)
+        .ok_or_else(|| Error::SkinOutOfBounds(skin, model.skin_tables().count() as u16))?;
 
     let loader = Loader::new()?;
 
@@ -85,11 +80,7 @@ fn export(model: Model, output: Output) -> Result<(), Error> {
         extensions: Default::default(),
         extras: Default::default(),
         name: None,
-        uri: if output == Output::Standard {
-            Some("buffer0.bin".into())
-        } else {
-            None
-        },
+        uri: None,
     };
 
     let root = json::Root {
@@ -110,41 +101,40 @@ fn export(model: Model, output: Output) -> Result<(), Error> {
         ..Default::default()
     };
 
-    match output {
-        Output::Standard => {
-            let _ = fs::create_dir("triangle");
+    let json_string = json::serialize::to_string(&root).expect("Serialization error");
+    let mut json_offset = json_string.len() as u32;
+    align_to_multiple_of_four(&mut json_offset);
+    let glb = gltf::binary::Glb {
+        header: gltf::binary::Header {
+            magic: *b"glTF",
+            version: 2,
+            length: json_offset + buffer.len() as u32,
+        },
+        bin: Some(Cow::Owned(pad_byte_vector(buffer))),
+        json: Cow::Owned(json_string.into_bytes()),
+    };
+    let writer = fs::File::create(target).expect("I/O error");
+    glb.to_writer(writer).expect("glTF binary output error");
 
-            let writer = fs::File::create("triangle/triangle.gltf").expect("I/O error");
-            json::serialize::to_writer_pretty(writer, &root).expect("Serialization error");
-
-            let bin = pad_byte_vector(buffer);
-            let mut writer = fs::File::create("triangle/buffer0.bin").expect("I/O error");
-            writer.write_all(&bin).expect("I/O error");
-        }
-        Output::Binary => {
-            let json_string = json::serialize::to_string(&root).expect("Serialization error");
-            let mut json_offset = json_string.len() as u32;
-            align_to_multiple_of_four(&mut json_offset);
-            let glb = gltf::binary::Glb {
-                header: gltf::binary::Header {
-                    magic: *b"glTF",
-                    version: 2,
-                    length: json_offset + buffer.len() as u32,
-                },
-                bin: Some(Cow::Owned(pad_byte_vector(buffer))),
-                json: Cow::Owned(json_string.into_bytes()),
-            };
-            let writer = std::fs::File::create("output.glb").expect("I/O error");
-            glb.to_writer(writer).expect("glTF binary output error");
-        }
-    }
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
-    let path = PathBuf::from(args_os().nth(1).expect("No model file provided"));
-    let source_model = Model::from_path(&path)?;
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    source: PathBuf,
+    target: PathBuf,
 
-    export(source_model, Output::Binary)?;
+    #[arg(short, long, default_value_t = 0)]
+    skin: u16,
+}
+
+fn main() -> MainResult {
+    tracing_subscriber::fmt::init();
+    let args = Args::parse();
+
+    let source_model = Model::from_path(&args.source)?;
+
+    export(source_model, args.skin, args.target)?;
     Ok(())
 }

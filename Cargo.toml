@@ -28,6 +28,8 @@ steamy-vdf = { version = "0.3.0", git = "https://github.com/icewind1991/steamy",
 gltf-json = "1.3.0"
 gltf = "1.3.0"
 image = "0.23.14"
+clap = { version = "4.4.11", features = ["derive"] }
+main_error = "0.1.2"
 
 [[bench]]
 name = "parse"

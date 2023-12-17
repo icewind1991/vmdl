@@ -60,6 +60,27 @@ impl Loader {
     }
 
     #[tracing::instrument]
+    pub fn exists(&self, name: &str) -> bool {
+        debug!("loading {}", name);
+        if name.ends_with("bsp") {
+            let path = self.tf_dir.join(name);
+            if path.exists() {
+                return true;
+            }
+            let path = self.download.join(name);
+            if path.exists() {
+                return true;
+            }
+        }
+        for vpk in self.vpks.iter() {
+            if vpk.tree.contains_key(name) {
+                return true;
+            }
+        }
+        false
+    }
+
+    #[tracing::instrument]
     pub fn load(&self, name: &str) -> Result<Vec<u8>, LoadError> {
         debug!("loading {}", name);
         if name.ends_with("bsp") {
@@ -87,8 +108,8 @@ impl Loader {
 
     pub fn load_from_paths(&self, name: &str, paths: &[String]) -> Result<Vec<u8>, LoadError> {
         for path in paths {
-            if let Ok(data) = self.load(&format!("{}{}", path, name)) {
-                return Ok(data);
+            if self.exists(&format!("{}{}", path, name)) {
+                return self.load(&format!("{}{}", path, name));
             }
         }
         error!("Failed to find {} in vpk paths: {}", name, paths.join(", "));
