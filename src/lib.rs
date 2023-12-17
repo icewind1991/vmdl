@@ -15,7 +15,9 @@ pub use error::*;
 pub use handle::Handle;
 pub use shared::*;
 use std::any::type_name;
+use std::fs;
 use std::mem::size_of;
+use std::path::Path;
 
 pub struct Model {
     #[allow(dead_code)]
@@ -27,6 +29,21 @@ pub struct Model {
 impl Model {
     pub fn from_parts(mdl: Mdl, vtx: Vtx, vvd: Vvd) -> Self {
         Model { mdl, vtx, vvd }
+    }
+
+    /// Load the model from path
+    ///
+    /// Requires a path to the `.mdl` file and the `.dx90.vtx` and `.vvd` files for the model to be in the same directory.
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, ModelError> {
+        let path = path.as_ref();
+        let data = fs::read(path)?;
+        let mdl = Mdl::read(&data)?;
+        let data = fs::read(path.with_extension("dx90.vtx"))?;
+        let vtx = Vtx::read(&data)?;
+        let data = fs::read(path.with_extension("vvd"))?;
+        let vvd = Vvd::read(&data)?;
+
+        Ok(Model::from_parts(mdl, vtx, vvd))
     }
 
     pub fn vertices(&self) -> &[Vertex] {

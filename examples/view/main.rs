@@ -4,14 +4,10 @@ mod material;
 use crate::loader::{LoadError, Loader};
 use crate::material::load_material_fallback;
 use std::env::args_os;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 use three_d::*;
 use tracing::error;
-use vmdl::mdl::Mdl;
-use vmdl::vtx::Vtx;
-use vmdl::vvd::Vvd;
 use vmdl::{Model, Vector};
 
 #[derive(Debug, Error)]
@@ -51,7 +47,7 @@ fn main() -> Result<(), Error> {
     let mut args = args_os();
     let _ = args.next();
     let path = PathBuf::from(args.next().expect("No demo file provided"));
-    let source_model = load(&path).unwrap();
+    let source_model = Model::from_path(&path)?;
 
     let window = Window::new(WindowSettings {
         title: path.display().to_string(),
@@ -245,17 +241,6 @@ fn main() -> Result<(), Error> {
         FrameOutput::default()
     });
     Ok(())
-}
-
-fn load(path: &Path) -> Result<Model, vmdl::ModelError> {
-    let data = fs::read(path)?;
-    let mdl = Mdl::read(&data)?;
-    let data = fs::read(path.with_extension("dx90.vtx"))?;
-    let vtx = Vtx::read(&data)?;
-    let data = fs::read(path.with_extension("vvd"))?;
-    let vvd = Vvd::read(&data)?;
-
-    Ok(Model::from_parts(mdl, vtx, vvd))
 }
 
 // 1 hammer unit is ~1.905cm

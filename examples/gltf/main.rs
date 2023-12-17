@@ -15,8 +15,8 @@ use gltf_json::Index;
 use std::borrow::Cow;
 use std::env::args_os;
 use std::io::Write;
-use std::path::{Path, PathBuf};
-use vmdl::{Mdl, Model, Vtx, Vvd};
+use std::path::PathBuf;
+use vmdl::Model;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Output {
@@ -141,20 +141,9 @@ fn export(model: Model, output: Output) -> Result<(), Error> {
     Ok(())
 }
 
-fn load(path: &Path) -> Result<Model, vmdl::ModelError> {
-    let data = fs::read(path)?;
-    let mdl = Mdl::read(&data)?;
-    let data = fs::read(path.with_extension("dx90.vtx"))?;
-    let vtx = Vtx::read(&data)?;
-    let data = fs::read(path.with_extension("vvd"))?;
-    let vvd = Vvd::read(&data)?;
-
-    Ok(Model::from_parts(mdl, vtx, vvd))
-}
-
 fn main() -> Result<(), Error> {
     let path = PathBuf::from(args_os().nth(1).expect("No model file provided"));
-    let source_model = load(&path)?;
+    let source_model = Model::from_path(&path)?;
 
     export(source_model, Output::Binary)?;
     Ok(())
