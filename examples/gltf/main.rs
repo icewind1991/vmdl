@@ -1,6 +1,9 @@
 mod convert;
+#[path = "../common/error.rs"]
 mod error;
+#[path = "../common/loader.rs"]
 mod loader;
+#[path = "../common/materials.rs"]
 mod material;
 
 use gltf_json as json;

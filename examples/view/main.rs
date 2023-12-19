@@ -1,32 +1,19 @@
+#[path = "../common/error.rs"]
+mod error;
+#[path = "../common/loader.rs"]
 mod loader;
+#[path = "../common/materials.rs"]
 mod material;
 
-use crate::loader::{LoadError, Loader};
-use crate::material::load_material_fallback;
+use crate::error::Error;
+use crate::loader::Loader;
+use crate::material::{load_material_fallback, MaterialData};
+use image::GenericImageView;
 use std::env::args_os;
 use std::path::PathBuf;
 use thiserror::Error;
 use three_d::*;
-use tracing::error;
 use vmdl::{Model, Vector};
-
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error(transparent)]
-    Three(#[from] Box<dyn std::error::Error>),
-    #[error(transparent)]
-    Mdl(#[from] vmdl::ModelError),
-    #[error(transparent)]
-    IO(#[from] std::io::Error),
-    #[error(transparent)]
-    Render(#[from] RendererError),
-    #[error(transparent)]
-    Loader(#[from] LoadError),
-    #[error(transparent)]
-    Vtf(#[from] vtf::Error),
-    #[error("{0}")]
-    Other(&'static str),
-}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[allow(missing_docs)]
@@ -294,10 +281,59 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
         .textures()
         .iter()
         .map(|texture| load_material_fallback(&texture.name, model.texture_directories(), loader))
+        .map(convert_material)
         .collect();
 
     CpuModel {
         materials,
         geometries,
+    }
+}
+
+fn convert_material(material: MaterialData) -> CpuMaterial {
+    CpuMaterial {
+        albedo: Color::new(
+            material.color[0],
+            material.color[1],
+            material.color[2],
+            material.color[3],
+        ),
+        name: material.name,
+        albedo_texture: material
+            .texture
+            .map(|tex| convert_texture(tex, material.translucent | material.alpha_test.is_some())),
+        alpha_cutout: material.alpha_test,
+        normal_texture: material.bump_map.map(|tex| convert_texture(tex, true)),
+        ..CpuMaterial::default()
+    }
+}
+fn convert_texture(texture: material::TextureData, keep_alpha: bool) -> CpuTexture {
+    let width = texture.image.width();
+    let height = texture.image.height();
+    let data = if keep_alpha {
+        TextureData::RgbaU8(
+            texture
+                .image
+                .into_rgba8()
+                .pixels()
+                .map(|pixel| pixel.0)
+                .collect(),
+        )
+    } else {
+        TextureData::RgbU8(
+            texture
+                .image
+                .into_rgb8()
+                .pixels()
+                .map(|pixel| pixel.0)
+                .collect(),
+        )
+    };
+    CpuTexture {
+        data,
+        name: texture.name,
+        height,
+        width,
+        ..CpuTexture::default()
     }
 }
