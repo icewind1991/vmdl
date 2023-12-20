@@ -1,8 +1,6 @@
 mod convert;
 #[path = "../common/error.rs"]
 mod error;
-#[path = "../common/loader.rs"]
-mod loader;
 #[path = "../common/materials.rs"]
 mod material;
 
@@ -11,7 +9,6 @@ use gltf_json as json;
 use std::fs;
 
 use crate::convert::{push_material, push_model};
-use crate::loader::Loader;
 use crate::material::load_material_fallback;
 use clap::Parser;
 pub use error::Error;
@@ -20,6 +17,7 @@ use main_error::MainResult;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
+use tf_asset_loader::Loader;
 use vmdl::Model;
 
 fn align_to_multiple_of_four(n: &mut u32) {

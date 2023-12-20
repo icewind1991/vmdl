@@ -1,6 +1,6 @@
-use crate::loader::{LoadError, Loader};
 use crate::Error;
 use image::DynamicImage;
+use tf_asset_loader::Loader;
 use tracing::{error, instrument};
 use vmt_parser::from_str;
 use vtf::vtf::VTF;
@@ -54,8 +54,8 @@ pub fn load_material(
     let path = format!("{}.vmt", name.to_ascii_lowercase().trim_end_matches(".vmt"));
     let path = loader
         .find_in_paths(&path, &dirs)
-        .ok_or(LoadError::Other("Can't find file in vpks"))?;
-    let raw = loader.load(&path)?;
+        .ok_or(Error::Other(format!("Can't find file {}", path)))?;
+    let raw = loader.load(&path)?.expect("didn't find foudn path?");
     let vdf = String::from_utf8(raw)?;
 
     let material = from_str(&vdf).map_err(|e| {
@@ -64,7 +64,9 @@ pub fn load_material(
         Error::Other(format!("Failed to load material {}", path))
     })?;
     let material = material.resolve(|path| {
-        let data = loader.load(path)?;
+        let data = loader
+            .load(path)?
+            .ok_or(Error::Other(format!("Can't find file {}", path)))?;
         let vdf = String::from_utf8(data)?;
         Ok::<_, Error>(vdf)
     })?;
@@ -102,7 +104,9 @@ fn load_texture(name: &str, loader: &Loader) -> Result<DynamicImage, Error> {
         "materials/{}.vtf",
         name.trim_end_matches(".vtf").trim_start_matches('/')
     );
-    let mut raw = loader.load(&path)?;
+    let mut raw = loader
+        .load(&path)?
+        .ok_or(Error::Other(format!("Can't find file {}", path)))?;
     let vtf = VTF::read(&mut raw)?;
     let image = vtf.highres_image.decode(0)?;
     Ok(image)

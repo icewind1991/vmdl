@@ -2582,6 +2582,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "222a222a5bfe1bba4a77b45ec488a741b3cb8872e5e499451fd7d0129c9c7c3d"
 
 [[package]]
+name = "tf-asset-loader"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d19874714b7454f34d6142f9a2e2521b6e48ff4b3929cbac7acc72f161baf7bf"
+dependencies = [
+ "steamlocate",
+ "thiserror",
+ "tracing",
+ "vpk",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2878,13 +2890,12 @@ dependencies = [
  "main_error",
  "miette",
  "static_assertions",
- "steamlocate",
+ "tf-asset-loader",
  "thiserror",
  "three-d",
  "tracing",
  "tracing-subscriber",
  "vmt-parser",
- "vpk",
  "vtf",
 ]
 

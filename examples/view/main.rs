@@ -1,16 +1,14 @@
 #[path = "../common/error.rs"]
 mod error;
-#[path = "../common/loader.rs"]
-mod loader;
 #[path = "../common/materials.rs"]
 mod material;
 
 use crate::error::Error;
-use crate::loader::Loader;
 use crate::material::{load_material_fallback, MaterialData};
 use image::GenericImageView;
 use std::env::args_os;
 use std::path::PathBuf;
+use tf_asset_loader::Loader;
 use thiserror::Error;
 use three_d::*;
 use vmdl::{Model, Vector};
@@ -59,6 +57,7 @@ fn main() -> Result<(), Error> {
     let mut gui = three_d::GUI::new(&context);
 
     let loader = Loader::new().expect("loader");
+    dbg!(&loader);
     let skin_count = source_model.skin_tables().count();
 
     let cpu_models = (0..skin_count).map(|skin| model_to_model(&source_model, &loader, skin));

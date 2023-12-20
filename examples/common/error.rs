@@ -1,6 +1,6 @@
-use crate::loader::LoadError;
 use miette::Diagnostic;
 use std::string::FromUtf8Error;
+use tf_asset_loader::LoaderError;
 use thiserror::Error;
 use vmt_parser::VdfError;
 
@@ -14,7 +14,7 @@ pub enum Error {
     #[error(transparent)]
     IO(#[from] std::io::Error),
     #[error(transparent)]
-    Loader(#[from] LoadError),
+    Loader(#[from] LoaderError),
     #[error(transparent)]
     Vtf(#[from] vtf::Error),
     #[error(transparent)]
