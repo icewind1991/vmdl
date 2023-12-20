@@ -135,15 +135,16 @@ pub struct SkinTable<'a> {
 
 impl<'a> SkinTable<'a> {
     pub fn texture(&self, index: i32) -> Option<&'a str> {
-        let texture_index = self.table.get(index as usize)?;
-        self.textures
-            .get(*texture_index as usize)
-            .map(|info| info.name.as_str())
+        self.texture_info(index).map(|info| info.name.as_str())
     }
 
     pub fn texture_index(&self, index: i32) -> Option<usize> {
         let texture_index = self.table.get(index as usize)?;
         Some(*texture_index as usize)
+    }
+    pub fn texture_info(&self, index: i32) -> Option<&'a TextureInfo> {
+        let texture_index = self.table.get(index as usize)?;
+        self.textures.get(*texture_index as usize)
     }
 }
 
