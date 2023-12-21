@@ -6,6 +6,7 @@ description = "Rust parser for valve model files."
 repository = "https://github.com/icewind1991/vmdl"
 license = "MIT"
 exclude = ["data"]
+rust-version = "1.62.0"
 
 [dependencies]
 arrayvec = "0.7.2"

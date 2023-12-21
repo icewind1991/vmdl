@@ -22,7 +22,21 @@
         inherit system overlays;
       };
       lib = pkgs.lib;
-      naersk' = pkgs.callPackage naersk {};
+
+      msrv = (fromTOML (readFile ./Cargo.toml)).package.rust-version;
+      inherit (builtins) fromTOML readFile;
+      toolchain = pkgs.rust-bin.stable.latest.default;
+      msrvToolchain = pkgs.rust-bin.stable."${msrv}".default;
+
+      naersk' = pkgs.callPackage naersk {
+        rustc = toolchain;
+        cargo = toolchain;
+      };
+      msrvNaersk = pkgs.callPackage naersk {
+        rustc = msrvToolchain;
+        cargo = msrvToolchain;
+      };
+
       src = lib.sources.sourceByRegex (lib.cleanSource ./.) ["Cargo.*" "(src|benches|tests|examples|data)(/.*)?"];
       nearskOpt = {
         pname = "vmdl";
@@ -54,6 +68,9 @@
           release = false;
           mode = "test";
           nativeBuildInputs = exampleBuildInputs;
+        });
+        msrv = msrvNaersk.buildPackage (nearskOpt // {
+          mode = "check";
         });
       };
       devShells.default = pkgs.mkShell {
