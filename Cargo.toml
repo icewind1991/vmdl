@@ -2,6 +2,9 @@
 name = "vmdl"
 version = "0.1.0"
 edition = "2021"
+description = "Rust parser for valve model files."
+repository = "https://github.com/icewind1991/vmdl"
+license = "MIT"
 exclude = ["data"]
 
 [dependencies]
@@ -27,7 +30,7 @@ gltf = "1.3.0"
 image = "0.23.14"
 clap = { version = "4.4.11", features = ["derive"] }
 main_error = "0.1.2"
-vmt-parser = { version = "0.1", git = "https://github.com/icewind1991/vmt-parser" }
+vmt-parser = "0.1"
 tf-asset-loader = "0.1"
 
 [[bench]]
