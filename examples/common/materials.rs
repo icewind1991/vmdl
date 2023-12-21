@@ -54,7 +54,7 @@ pub fn load_material(
     let path = format!("{}.vmt", name.to_ascii_lowercase().trim_end_matches(".vmt"));
     let path = loader
         .find_in_paths(&path, &dirs)
-        .ok_or(Error::Other(format!("Can't find file {}", path)))?;
+        .ok_or_else(|| Error::Other(format!("Can't find file {}", path)))?;
     let raw = loader.load(&path)?.expect("didn't find foudn path?");
     let vdf = String::from_utf8(raw)?;
 
@@ -71,7 +71,9 @@ pub fn load_material(
         Ok::<_, Error>(vdf)
     })?;
 
-    let base_texture = material.base_texture();
+    let base_texture = material
+        .base_texture()
+        .ok_or_else(|| Error::Other("no basetexture".into()))?;
 
     let translucent = material.translucent();
     let glass = material.surface_prop() == Some("glass");
