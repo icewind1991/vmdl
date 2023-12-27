@@ -45,7 +45,7 @@ fn main() -> Result<(), Error> {
 
     let mut camera = Camera::new_perspective(
         window.viewport(),
-        vec3(2.0, 2.0, 5.0),
+        vec3(2.0, 2.0, 2.0),
         vec3(0.0, 0.0, 0.0),
         vec3(0.0, 1.0, 0.0),
         degrees(90.0),
@@ -57,7 +57,6 @@ fn main() -> Result<(), Error> {
     let mut gui = three_d::GUI::new(&context);
 
     let loader = Loader::new().expect("loader");
-    dbg!(&loader);
     let skin_count = source_model.skin_tables().count();
 
     let cpu_models = (0..skin_count).map(|skin| model_to_model(&source_model, &loader, skin));
@@ -232,20 +231,29 @@ fn main() -> Result<(), Error> {
 // 1 hammer unit is ~1.905cm
 const UNIT_SCALE: f32 = 1.0 / (1.905 * 100.0);
 
+pub fn map_coords<C: Into<Vec3>>(vec: C) -> Vec3 {
+    let vec = vec.into();
+    Vec3 {
+        x: vec.y * UNIT_SCALE,
+        y: vec.z * UNIT_SCALE,
+        z: vec.x * UNIT_SCALE,
+    }
+}
+
 fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
-    let offset = model
-        .vertices()
-        .iter()
-        .map(|vert| vert.position.y)
-        .max_by(|a, b| a.total_cmp(b))
-        .unwrap();
+    let bounds = model.bounding_box();
     let offset = Vector {
-        x: 0.0,
-        y: -offset / 2.0,
-        z: 0.0,
+        x: -(bounds.1.x + bounds.0.x) / 2.0,
+        y: -(bounds.1.y + bounds.0.y) / 2.0,
+        z: -(bounds.1.z + bounds.0.z) / 2.0,
     };
 
     let skin = model.skin_tables().nth(skin).unwrap();
+
+    let transforms = model
+        .bones()
+        .map(|bone| Mat4::from(cgmath::Quaternion::from(bone.rot)))
+        .fold(Mat4::identity(), |a, b| a * b);
 
     let geometries = model
         .meshes()
@@ -256,7 +264,8 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
 
             let positions: Vec<Vec3> = mesh
                 .vertices()
-                .map(|vertex| ((vertex.position + offset) * UNIT_SCALE * 10.0).into())
+                .map(|vertex| map_coords(vertex.position + offset) * 10.0)
+                .map(|vertex: Vec3| (transforms * vertex.extend(1.0)).truncate())
                 .collect();
             let normals: Vec<Vec3> = mesh.vertices().map(|vertex| vertex.normal.into()).collect();
             let uvs: Vec<Vec2> = mesh

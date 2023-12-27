@@ -1,7 +1,8 @@
 use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Deg, Euler, Rad, Vector3};
+use cgmath::{Deg, Euler, Rad, Rotation3, Vector3};
+use std::f32::consts::PI;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
@@ -101,6 +102,23 @@ impl From<Quaternion> for cgmath::Quaternion<f32> {
     }
 }
 
+impl From<cgmath::Quaternion<f32>> for Quaternion {
+    fn from(q: cgmath::Quaternion<f32>) -> Self {
+        Quaternion {
+            x: q.v.x,
+            y: q.v.y,
+            z: q.v.z,
+            w: q.s,
+        }
+    }
+}
+
+impl From<Quaternion> for cgmath::Matrix4<f32> {
+    fn from(q: Quaternion) -> Self {
+        cgmath::Quaternion::from(q).into()
+    }
+}
+
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct RadianEuler {
@@ -126,6 +144,21 @@ impl From<RadianEuler> for Euler<Deg<f32>> {
             y: Rad(e.y).into(),
             z: Rad(e.z).into(),
         }
+    }
+}
+
+impl From<RadianEuler> for cgmath::Quaternion<f32> {
+    fn from(value: RadianEuler) -> Self {
+        // angles are applied in roll, pitch, yaw order
+        cgmath::Quaternion::from_angle_y(Rad(value.x))
+            * cgmath::Quaternion::from_angle_x(Rad(value.y))
+            * cgmath::Quaternion::from_angle_z(Rad(-value.z))
+    }
+}
+
+impl From<RadianEuler> for Quaternion {
+    fn from(value: RadianEuler) -> Self {
+        cgmath::Quaternion::from(value).into()
     }
 }
 

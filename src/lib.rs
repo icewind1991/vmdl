@@ -6,7 +6,7 @@ pub mod vtx;
 pub mod vvd;
 
 pub use crate::mdl::Mdl;
-use crate::mdl::TextureInfo;
+use crate::mdl::{Bone, TextureInfo};
 pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
@@ -136,6 +136,10 @@ impl Model {
 
     pub fn name(&self) -> &str {
         self.mdl.name.as_str()
+    }
+
+    pub fn bones(&self) -> impl Iterator<Item = &Bone> {
+        self.mdl.bones.iter()
     }
 }
 

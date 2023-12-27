@@ -2,9 +2,9 @@ mod raw;
 
 pub use raw::header::*;
 pub use raw::header2::*;
+pub use raw::*;
 use std::mem::size_of;
 
-use crate::mdl::raw::{BodyPartHeader, Bone, MeshHeader, MeshTexture, ModelHeader};
 use crate::vvd::Vertex;
 use crate::{
     read_indexes, read_relative, read_relative_iter, FixedString, ModelError, ReadRelative,

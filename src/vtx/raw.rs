@@ -215,6 +215,7 @@ impl StripHeader {
 #[repr(C)]
 #[repr(packed)]
 pub struct Vertex {
+    // these index into the mesh's vert[origMeshVertID]'s bones
     pub bone_weight_indexes: [u8; 3],
     pub bone_count: u8,
     pub original_mesh_vertex_id: u16,
