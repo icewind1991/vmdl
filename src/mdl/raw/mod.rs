@@ -33,10 +33,12 @@ pub struct Bone {
     reserved: [i32; 8], // remove as appropriate
 }
 
+#[derive(Zeroable, Pod, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct BoneFlags(u32);
+
 bitflags! {
-    #[derive(Zeroable, Pod)]
-    #[repr(C)]
-    pub struct BoneFlags: u32 {
+    impl BoneFlags: u32 {
         const BONE_PHYSICALLY_SIMULATED = 	0x00000001;
         const BONE_PHYSICS_PROCEDURAL = 	0x00000002;
         const BONE_ALWAYS_PROCEDURAL = 		0x00000004;

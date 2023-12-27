@@ -102,10 +102,12 @@ impl MeshHeader {
     }
 }
 
+#[derive(Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
+pub struct MeshFlags(u8);
+
 bitflags! {
-    #[derive(Zeroable, Pod)]
-    #[repr(C)]
-    pub struct MeshFlags: u8 {
+    impl MeshFlags: u8 {
         const IS_TEETH = 0x01;
         const IS_EYES =  0x02;
     }
@@ -149,10 +151,12 @@ impl StripGroupHeader {
     }
 }
 
+#[derive(Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
+pub struct StripGroupFlags(u8);
+
 bitflags! {
-    #[derive(Zeroable, Pod)]
-    #[repr(C)]
-    pub struct StripGroupFlags: u8 {
+    impl StripGroupFlags: u8 {
         const IS_FLEXED =         0x01;
         const IS_HWSKINNED =      0x02;
         const IS_DELTA_FLEXED =   0x04;
@@ -176,10 +180,12 @@ pub struct StripHeader {
 
 static_assertions::const_assert_eq!(size_of::<StripHeader>(), 27);
 
+#[derive(Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
+pub struct StripFlags(u8);
+
 bitflags! {
-    #[derive(Zeroable, Pod)]
-    #[repr(C)]
-    pub struct StripFlags: u8 {
+    impl StripFlags: u8 {
         const IS_TRI_LIST =  0x01;
         const IS_TRI_STRIP = 0x02;
     }
