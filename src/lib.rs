@@ -13,9 +13,11 @@ pub use crate::vvd::Vvd;
 use bytemuck::{pod_read_unaligned, Pod};
 pub use error::*;
 pub use handle::Handle;
+use itertools::Either;
 pub use shared::*;
 use std::any::type_name;
 use std::fs;
+use std::iter::once;
 use std::mem::size_of;
 use std::path::Path;
 
@@ -63,13 +65,22 @@ impl Model {
     }
 
     pub fn skin_tables(&self) -> impl Iterator<Item = SkinTable> {
-        self.mdl
-            .skin_table
-            .chunks(self.mdl.header.skin_reference_count as usize)
-            .map(|chunk| SkinTable {
-                table: chunk,
-                textures: &self.mdl.textures,
-            })
+        if self.mdl.header.skin_reference_count > 0 {
+            Either::Left(
+                self.mdl
+                    .skin_table
+                    .chunks(self.mdl.header.skin_reference_count as usize)
+                    .map(|chunk| SkinTable {
+                        table: chunk,
+                        textures: &self.mdl.textures,
+                    }),
+            )
+        } else {
+            Either::Right(once(SkinTable {
+                table: &[],
+                textures: &[],
+            }))
+        }
     }
 
     pub fn meshes(&self) -> impl Iterator<Item = Mesh> {
