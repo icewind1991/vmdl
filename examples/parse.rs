@@ -20,7 +20,7 @@ fn main() -> Result<(), vmdl::ModelError> {
     for bone in mdl.bones {
         println!(
             "{}: from {} at\n\t{:?}\n\t{:?}",
-            bone.name, bone.parent, bone.rot, bone.procedural_rules
+            bone.name, bone.parent, bone.rot, bone.contents
         );
     }
 

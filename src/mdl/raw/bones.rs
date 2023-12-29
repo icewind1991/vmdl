@@ -24,7 +24,7 @@ pub struct BoneHeader {
     pub proc_index: i32,       // procedural rule
     pub physics_bone: i32,     // index into physically simulated bone
     pub surface_prop_idx: i32, // index into string table for property name
-    pub contents: i32,         // See BSPFlags.h for the contents flags
+    pub contents: BoneContentFlags,
 
     #[allow(dead_code)]
     reserved: [i32; 8], // remove as appropriate
@@ -51,7 +51,7 @@ pub struct Bone {
     pub procedural_rules: Option<ProceduralBone>,
     pub physics_bone: i32, // index into physically simulated bone
     pub surface_prop: String,
-    pub contents: i32, // See BSPFlags.h for the contents flags
+    pub contents: BoneContentFlags,
 }
 
 impl ReadRelative for Bone {
@@ -267,5 +267,51 @@ bitflags! {
         const JIGGLE_HAS_BASE_SPRING =       0x40;
         /// simple squash and stretch sinusoid "boing"
         const JIGGLE_IS_BOING =              0x80;
+    }
+}
+
+#[derive(Zeroable, Pod, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct BoneContentFlags(u32);
+
+bitflags! {
+    impl BoneContentFlags: u32 {
+        const CONTENTS_SOLID = 	              0x01;
+        const CONTENTS_WINDOW =               0x02;
+        const CONTENTS_AUX = 	              0x04;
+        const CONTENTS_GRATE =                0x08;
+        const CONTENTS_SLIME =                0x10;
+        const CONTENTS_WATER =                0x20;
+        const CONTENTS_BLOCKLOS =             0x40;
+        const CONTENTS_OPAQUE =               0x80;
+
+        const CONTENTS_TESTFOGVOLUME =        0x100;
+
+        const CONTENTS_TEAM1 =                0x800;
+        const CONTENTS_TEAM2 =                0x1000;
+
+        const CONTENTS_IGNORE_NODRAW_OPAQUE = 0x2000;
+
+        const CONTENTS_MOVABLE =              0x4000;
+        const CONTENTS_AREAPORTAL =           0x8000;
+
+        const CONTENTS_PLAYERCLIP =           0x10000;
+        const CONTENTS_MONSTERCLIP =          0x20000;
+
+        const CONTENTS_CURRENT_0 =            0x40000;
+        const CONTENTS_CURRENT_90 =           0x80000;
+        const CONTENTS_CURRENT_180 =          0x100000;
+        const CONTENTS_CURRENT_270 =          0x200000;
+        const CONTENTS_CURRENT_UP =           0x400000;
+        const CONTENTS_CURRENT_DOWN =         0x800000;
+
+        const CONTENTS_ORIGIN =               0x1000000;
+
+        const CONTENTS_MONSTER =              0x2000000;
+        const CONTENTS_DEBRIS =               0x4000000;
+        const CONTENTS_DETAIL =               0x8000000;
+        const CONTENTS_TRANSLUCENT =          0x10000000;
+        const CONTENTS_LADDER =               0x20000000;
+        const CONTENTS_HITBOX =               0x40000000;
     }
 }
