@@ -17,6 +17,8 @@ fn main() -> Result<(), vmdl::ModelError> {
     let data = fs::read(path.with_extension("vvd"))?;
     let _vvd = Vvd::read(&data)?;
 
+    println!("{}", mdl.surface_prop);
+    println!("{:?}", mdl.key_values);
     for bone in mdl.bones {
         println!(
             "{}: from {} at\n\t{:?}\n\t{:?}",

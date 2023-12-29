@@ -6,7 +6,9 @@ pub use raw::*;
 use std::mem::size_of;
 
 use crate::vvd::Vertex;
-use crate::{read_relative, read_relative_iter, FixedString, ModelError, ReadRelative, Readable};
+use crate::{
+    read_relative, read_relative_iter, read_single, FixedString, ModelError, ReadRelative, Readable,
+};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -19,6 +21,8 @@ pub struct Mdl {
     pub textures: Vec<TextureInfo>,
     pub texture_paths: Vec<String>,
     pub skin_table: Vec<u16>,
+    pub surface_prop: String,
+    pub key_values: Option<String>,
 }
 
 impl Mdl {
@@ -40,8 +44,12 @@ impl Mdl {
         }
 
         let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
-
         let bones = read_relative(data, header.bone_indexes())?;
+        let surface_prop = read_single(data, header.surface_prop_index)?;
+        let key_values = (header.key_value_size > 0)
+            .then(|| read_single(data, header.key_value_index))
+            .transpose()?;
+
         Ok(Mdl {
             name,
             bones,
@@ -60,6 +68,8 @@ impl Mdl {
             texture_paths,
             skin_table,
             header,
+            surface_prop,
+            key_values,
         })
     }
 }

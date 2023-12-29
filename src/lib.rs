@@ -10,7 +10,7 @@ use crate::mdl::{Bone, TextureInfo};
 pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
-use bytemuck::{pod_read_unaligned, Pod};
+use bytemuck::{pod_read_unaligned, Contiguous, Pod};
 use cgmath::{Matrix4, SquareMatrix};
 pub use error::*;
 pub use handle::Handle;
@@ -140,6 +140,10 @@ impl Model {
             .map(Matrix4::from)
             .unwrap_or_else(Matrix4::identity)
     }
+
+    pub fn surface_prop(&self) -> &str {
+        self.mdl.surface_prop.as_str()
+    }
 }
 
 pub struct SkinTable<'a> {
@@ -227,6 +231,19 @@ fn read_relative<T: ReadRelative, I: Iterator<Item = usize>>(
     indexes: I,
 ) -> Result<Vec<T>, ModelError> {
     read_relative_iter(data, indexes).collect()
+}
+
+fn read_single<T: ReadRelative, I: TryInto<usize>>(data: &[u8], index: I) -> Result<T, ModelError> {
+    let index = index.try_into().map_err(|_| ModelError::OutOfBounds {
+        data: type_name::<T>(),
+        offset: usize::MAX_VALUE,
+    })?;
+    let data = data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
+        data: type_name::<T>(),
+        offset: index,
+    })?;
+    let header = <T::Header as Readable>::read(data)?;
+    T::read(data, header)
 }
 
 trait Readable: Sized {

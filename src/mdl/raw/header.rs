@@ -107,13 +107,13 @@ pub struct StudioHeader {
      * from the start of the file.
      */
     // Surface property value (single null-terminated string)
-    surface_prop_index: i32,
+    pub(crate) surface_prop_index: i32,
 
     // Unusual: In this one index comes first, then count.
     // Key-value mdl is a series of strings. If you can't find
     // what you're interested in, check the associated PHY file as well.
-    key_value_index: i32,
-    key_value_count: i32,
+    pub(crate) key_value_index: i32,
+    pub(crate) key_value_size: i32,
 
     // More inverse-kinematics
     // mstudioiklock_t
@@ -293,10 +293,6 @@ impl StudioHeader {
 
     pub fn local_pose_param_indexes(&self) -> impl Iterator<Item = usize> {
         index_range(self.local_pose_param_index, self.local_pose_param_count, 1)
-    }
-
-    pub fn key_value_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.key_value_index, self.key_value_count, 1)
     }
 
     pub fn ik_lock_indexes(&self) -> impl Iterator<Item = usize> {
