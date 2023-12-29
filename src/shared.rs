@@ -2,7 +2,6 @@ use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Deg, Euler, Rad, Rotation3, Vector3};
-use std::f32::consts::PI;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};

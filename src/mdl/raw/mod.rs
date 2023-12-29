@@ -1,4 +1,4 @@
-use crate::{index_range, FixedString};
+use crate::{index_range, FixedString, ModelError, ReadRelative};
 use crate::{Quaternion, RadianEuler, Vector};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
@@ -9,7 +9,7 @@ pub mod header2;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
-pub struct Bone {
+pub struct BoneHeader {
     pub sz_name_index: i32,
     pub parent: i32,               // parent bone
     pub bone_controller: [i32; 6], // bone controller index, -1 == none
@@ -31,6 +31,60 @@ pub struct Bone {
 
     #[allow(dead_code)]
     reserved: [i32; 8], // remove as appropriate
+}
+
+static_assertions::const_assert_eq!(size_of::<BoneHeader>(), 216);
+
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub struct Bone {
+    pub name: String,
+    pub parent: i32,               // parent bone
+    pub bone_controller: [i32; 6], // bone controller index, -1 == none
+
+    pub pos: Vector,
+    pub quaternion: Quaternion,
+    pub rot: RadianEuler,
+    pub pos_scale: Vector,
+    pub rot_scale: Vector,
+
+    pub pose_to_bone: [[f32; 3]; 4], // 3x4 matrix
+    pub q_alignment: Quaternion,
+    pub flags: BoneFlags,
+    pub proc_type: i32,
+    pub proc_index: i32,       // procedural rule
+    pub physics_bone: i32,     // index into physically simulated bone
+    pub surface_prop_idx: i32, // index into string table for property name
+    pub contents: i32,         // See BSPFlags.h for the contents flags
+}
+
+impl ReadRelative for Bone {
+    type Header = BoneHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
+        let name_bytes = data
+            .get(header.sz_name_index as usize..)
+            .unwrap_or_default();
+
+        Ok(Bone {
+            name: String::read(name_bytes, ())?,
+            parent: header.parent,
+            bone_controller: header.bone_controller,
+            pos: header.pos,
+            quaternion: header.quaternion,
+            rot: header.rot,
+            pos_scale: header.pos_scale,
+            rot_scale: header.rot_scale,
+            pose_to_bone: header.pose_to_bone,
+            q_alignment: header.q_alignment,
+            flags: header.flags,
+            proc_type: header.proc_type,
+            proc_index: header.proc_index,
+            physics_bone: header.physics_bone,
+            surface_prop_idx: header.surface_prop_idx,
+            contents: header.contents,
+        })
+    }
 }
 
 #[derive(Zeroable, Pod, Copy, Clone, Debug)]

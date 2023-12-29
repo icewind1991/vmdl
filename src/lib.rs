@@ -203,20 +203,6 @@ impl<'a> Mesh<'a> {
     }
 }
 
-fn read_indexes<I: Iterator<Item = usize> + 'static, T: Readable>(
-    indexes: I,
-    data: &[u8],
-) -> impl Iterator<Item = Result<T, ModelError>> + '_ {
-    indexes
-        .map(|index| {
-            data.get(index..).ok_or_else(|| ModelError::OutOfBounds {
-                data: type_name::<T>(),
-                offset: index,
-            })
-        })
-        .map(|data| data.and_then(|data| T::read(data)))
-}
-
 fn index_range(index: i32, count: i32, size: usize) -> impl Iterator<Item = usize> {
     (0..count as usize)
         .map(move |i| i * size)

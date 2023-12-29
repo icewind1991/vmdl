@@ -1,5 +1,4 @@
 use crate::mdl::raw::*;
-use crate::mdl::Bone;
 use crate::{index_range, Vector};
 use std::mem::size_of;
 
@@ -211,7 +210,7 @@ impl StudioHeader {
     }
 
     pub fn bone_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.bone_offset, self.bone_count, size_of::<Bone>())
+        index_range(self.bone_offset, self.bone_count, size_of::<BoneHeader>())
     }
 
     pub fn bone_controller_indexes(&self) -> impl Iterator<Item = usize> {

@@ -18,9 +18,7 @@ fn main() -> Result<(), vmdl::ModelError> {
     let _vvd = Vvd::read(&data)?;
 
     for bone in mdl.bones {
-        dbg!(bone.flags);
-        dbg!(bone.rot);
-        dbg!(bone.quaternion);
+        println!("{}: from {} at {:?}", bone.name, bone.parent, bone.rot);
     }
 
     // let model = Model::from_parts(mdl, vtx, vvd);

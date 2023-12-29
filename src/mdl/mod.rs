@@ -6,10 +6,7 @@ pub use raw::*;
 use std::mem::size_of;
 
 use crate::vvd::Vertex;
-use crate::{
-    read_indexes, read_relative, read_relative_iter, FixedString, ModelError, ReadRelative,
-    Readable,
-};
+use crate::{read_relative, read_relative_iter, FixedString, ModelError, ReadRelative, Readable};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -44,7 +41,7 @@ impl Mdl {
 
         let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
 
-        let bones = read_indexes(header.bone_indexes(), data).collect::<Result<_>>()?;
+        let bones = read_relative(data, header.bone_indexes())?;
         Ok(Mdl {
             name,
             bones,
