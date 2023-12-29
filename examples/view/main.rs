@@ -250,12 +250,7 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
 
     let skin = model.skin_tables().nth(skin).unwrap();
 
-    let transforms = model
-        .bones()
-        .filter(|bone| bone.name == "root")
-        .next()
-        .map(|bone| Mat4::from(cgmath::Quaternion::from(bone.rot)))
-        .unwrap_or_else(|| Matrix4::identity());
+    let transforms = model.root_transform();
 
     let geometries = model
         .meshes()

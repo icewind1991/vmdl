@@ -18,7 +18,10 @@ fn main() -> Result<(), vmdl::ModelError> {
     let _vvd = Vvd::read(&data)?;
 
     for bone in mdl.bones {
-        println!("{}: from {} at {:?}", bone.name, bone.parent, bone.rot);
+        println!(
+            "{}: from {} at\n\t{:?}\n\t{:?}",
+            bone.name, bone.parent, bone.rot, bone.procedural_rules
+        );
     }
 
     // let model = Model::from_parts(mdl, vtx, vvd);

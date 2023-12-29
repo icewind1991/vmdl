@@ -2889,6 +2889,7 @@ dependencies = [
  "itertools 0.12.0",
  "main_error",
  "miette",
+ "num_enum 0.7.1",
  "static_assertions",
  "tf-asset-loader",
  "thiserror",

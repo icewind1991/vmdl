@@ -11,6 +11,7 @@ pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
 use bytemuck::{pod_read_unaligned, Pod};
+use cgmath::{Matrix4, SquareMatrix};
 pub use error::*;
 pub use handle::Handle;
 use itertools::Either;
@@ -140,6 +141,14 @@ impl Model {
 
     pub fn bones(&self) -> impl Iterator<Item = &Bone> {
         self.mdl.bones.iter()
+    }
+
+    pub fn root_transform(&self) -> Matrix4<f32> {
+        self.bones()
+            .next()
+            .map(|bone| Quaternion::from(bone.rot))
+            .map(|rotation| Matrix4::from(rotation))
+            .unwrap_or_else(|| Matrix4::identity())
     }
 }
 
