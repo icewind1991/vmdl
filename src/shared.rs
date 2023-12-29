@@ -6,7 +6,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
 
-#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, PartialEq)]
 #[repr(C)]
 pub struct Vector {
     pub x: f32,

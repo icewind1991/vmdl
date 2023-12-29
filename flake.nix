@@ -83,6 +83,7 @@
           clippy
           cargo-audit
           cargo-msrv
+          cargo-semver-checks
         ] ++ exampleBuildInputs;
 
         LD_LIBRARY_PATH = with pkgs; "/run/opengl-driver/lib/:${lib.makeLibraryPath ([libGL libGLU])}";

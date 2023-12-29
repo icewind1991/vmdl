@@ -16,10 +16,8 @@ pub struct StudioHeader {
 
     pub eye_position: Vector, // Position of player viewpoint relative to model origin
     pub illumination_position: Vector, // Position (relative to model origin) used to calculate ambient light contribution and cubemap reflections for the entire model.
-    pub hull_min: Vector,              // Corner of model hull box with the least X/Y/Z values
-    pub hull_max: Vector,              // Opposite corner of model hull box
-    pub view_bb_min: Vector,
-    pub view_bb_max: Vector,
+    pub bounding_box: [Vector; 2],
+    pub view_bounding_box: [Vector; 2],
 
     pub flags: ModelFlags,
 
@@ -43,8 +41,8 @@ pub struct StudioHeader {
     local_seq_count: i32,
     local_seq_offset: i32,
 
-    pub activity_list_version: i32, // ??
-    pub events_indexed: i32,        // ??
+    activity_list_version: i32, // ??
+    events_indexed: i32,        // ??
 
     // VMT texture filenames
     // mstudiotexture_t
@@ -58,9 +56,9 @@ pub struct StudioHeader {
     texture_dir_offset: i32,
 
     // Each skin-family assigns a texture-id to a skin location
-    pub skin_reference_count: i32,
-    pub skin_family_count: i32,
-    pub skin_reference_offset: i32,
+    pub(crate) skin_reference_count: i32,
+    pub(crate) skin_family_count: i32,
+    pub(crate) skin_reference_offset: i32,
 
     // mstudiobodyparts_t
     body_part_count: i32,
@@ -109,7 +107,7 @@ pub struct StudioHeader {
      * from the start of the file.
      */
     // Surface property value (single null-terminated string)
-    pub surface_prop_index: i32,
+    surface_prop_index: i32,
 
     // Unusual: In this one index comes first, then count.
     // Key-value mdl is a series of strings. If you can't find
@@ -122,8 +120,8 @@ pub struct StudioHeader {
     ik_lock_count: i32,
     ik_lock_index: i32,
 
-    pub mass: f32,     // Mass of object (4-bytes)
-    pub contents: i32, // ??
+    pub mass: f32,              // Mass of object (4-bytes)
+    pub contents: ContentFlags, // ??
 
     // Other models can be referenced for re-used sequences and animations
     // (See also: The $includemodel QC option.)
@@ -131,7 +129,7 @@ pub struct StudioHeader {
     include_model_count: i32,
     include_model_index: i32,
 
-    pub virtual_model: i32, // Placeholder for mutable-void*
+    virtual_model: i32, // Placeholder for mutable-void*
     // Note that the SDK only compiles as 32-bit, so an int and a pointer are the same size (4 bytes)
 
     // mstudioanimblock_t
@@ -139,35 +137,35 @@ pub struct StudioHeader {
     anim_blocks_count: i32,
     anim_blocks_index: i32,
 
-    pub anim_block_model: i32, // Placeholder for mutable-void*
+    anim_block_model: i32, // Placeholder for mutable-void*
 
     // Points to a series of bytes?
-    pub bone_table_name_index: i32,
+    bone_table_name_index: i32,
 
-    pub vertex_base: i32, // Placeholder for void*
-    pub offset_base: i32, // Placeholder for void*
+    vertex_base: i32, // Placeholder for void*
+    offset_base: i32, // Placeholder for void*
 
     // Used with $constantdirectionallight from the QC
     // Model should have flag #13 set if enabled
-    pub directional_dot_product: u8,
+    directional_dot_product: u8,
 
-    pub root_lod: u8, // Preferred rather than clamped
+    root_lod: u8, // Preferred rather than clamped
 
     // 0 means any allowed, N means Lod 0 -> (N-1)
-    pub num_allowed_root_lods: u8,
+    num_allowed_root_lods: u8,
 
     #[allow(dead_code)]
     unused0: u8, // ??
     #[allow(dead_code)]
     unused1: i32, // ??
 
-    pub flex_controller_ui_count: i32,
-    pub flex_controller_ui_index: i32,
+    flex_controller_ui_count: i32,
+    flex_controller_ui_index: i32,
 
-    pub vert_anim_fixed_point_scale: f32,
-    pub unused2: i32,
+    vert_anim_fixed_point_scale: f32,
+    unused2: i32,
 
-    pub studio_hdr2_index: i32,
+    studio_hdr2_index: i32,
 
     #[allow(dead_code)]
     unused3: i32,

@@ -119,20 +119,10 @@ impl Model {
 
     /// Calculate bounding coordinates of the model
     pub fn bounding_box(&self) -> (Vector, Vector) {
-        let mut min = Vector::from([f32::MAX, f32::MAX, f32::MAX]);
-        let mut max = Vector::from([f32::MIN, f32::MIN, f32::MIN]);
-
-        for point in self.vertices() {
-            let p = point.position;
-            min.x = f32::min(min.x, p.x);
-            min.y = f32::min(min.y, p.y);
-            min.z = f32::min(min.z, p.z);
-
-            max.x = f32::max(max.x, p.x);
-            max.y = f32::max(max.y, p.y);
-            max.z = f32::max(max.z, p.z);
-        }
-        (min, max)
+        (
+            self.mdl.header.bounding_box[0],
+            self.mdl.header.bounding_box[1],
+        )
     }
 
     pub fn name(&self) -> &str {
@@ -147,8 +137,8 @@ impl Model {
         self.bones()
             .next()
             .map(|bone| Quaternion::from(bone.rot))
-            .map(|rotation| Matrix4::from(rotation))
-            .unwrap_or_else(|| Matrix4::identity())
+            .map(Matrix4::from)
+            .unwrap_or_else(Matrix4::identity)
     }
 }
 

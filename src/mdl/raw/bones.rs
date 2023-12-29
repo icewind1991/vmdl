@@ -24,7 +24,7 @@ pub struct BoneHeader {
     pub proc_index: i32,       // procedural rule
     pub physics_bone: i32,     // index into physically simulated bone
     pub surface_prop_idx: i32, // index into string table for property name
-    pub contents: BoneContentFlags,
+    pub contents: ContentFlags,
 
     #[allow(dead_code)]
     reserved: [i32; 8], // remove as appropriate
@@ -51,7 +51,7 @@ pub struct Bone {
     pub procedural_rules: Option<ProceduralBone>,
     pub physics_bone: i32, // index into physically simulated bone
     pub surface_prop: String,
-    pub contents: BoneContentFlags,
+    pub contents: ContentFlags,
 }
 
 impl ReadRelative for Bone {
@@ -60,22 +60,22 @@ impl ReadRelative for Bone {
     fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
         let name_bytes =
             data.get(header.sz_name_index as usize..)
-                .ok_or_else(|| ModelError::OutOfBounds {
+                .ok_or(ModelError::OutOfBounds {
                     data: "bone name",
                     offset: header.sz_name_index as usize,
                 })?;
-        let surface_prop_bytes = data
-            .get(header.surface_prop_idx as usize..)
-            .ok_or_else(|| ModelError::OutOfBounds {
-                data: "bone surface property",
-                offset: header.surface_prop_idx as usize,
-            })?;
+        let surface_prop_bytes =
+            data.get(header.surface_prop_idx as usize..)
+                .ok_or(ModelError::OutOfBounds {
+                    data: "bone surface property",
+                    offset: header.surface_prop_idx as usize,
+                })?;
 
         let prop_type = ProceduralBoneType::try_from(header.proc_type).ok();
         let proc_bytes = (header.proc_index != 0)
             .then(|| {
                 data.get(header.proc_index as usize..)
-                    .ok_or_else(|| ModelError::OutOfBounds {
+                    .ok_or(ModelError::OutOfBounds {
                         data: "bone surface property",
                         offset: header.proc_index as usize,
                     })
@@ -272,10 +272,10 @@ bitflags! {
 
 #[derive(Zeroable, Pod, Copy, Clone, Debug)]
 #[repr(C)]
-pub struct BoneContentFlags(u32);
+pub struct ContentFlags(u32);
 
 bitflags! {
-    impl BoneContentFlags: u32 {
+    impl ContentFlags: u32 {
         const CONTENTS_SOLID = 	              0x01;
         const CONTENTS_WINDOW =               0x02;
         const CONTENTS_AUX = 	              0x04;
