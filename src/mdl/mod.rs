@@ -16,6 +16,7 @@ type Result<T> = std::result::Result<T, ModelError>;
 pub struct Mdl {
     pub name: FixedString<64>,
     pub header: StudioHeader,
+    pub header2: Option<StudioHeader2>,
     pub bones: Vec<Bone>,
     pub body_parts: Vec<BodyPart>,
     pub textures: Vec<TextureInfo>,
@@ -30,6 +31,10 @@ pub struct Mdl {
 impl Mdl {
     pub fn read(data: &[u8]) -> Result<Self> {
         let header = <StudioHeader as Readable>::read(data)?;
+        let header2 = header
+            .header2_index()
+            .map(|index| read_single(data, index))
+            .transpose()?;
         let name = header.name.try_into()?;
         let mut textures = read_relative_iter(data, header.texture_indexes())
             .collect::<Result<Vec<TextureInfo>>>()?;
@@ -72,6 +77,7 @@ impl Mdl {
             texture_paths,
             skin_table,
             header,
+            header2,
             surface_prop,
             key_values,
             pose_parameters,

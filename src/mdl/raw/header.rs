@@ -1,5 +1,6 @@
 use crate::mdl::raw::*;
-use crate::{index_range, Vector};
+use crate::mdl::StudioHeader2;
+use crate::{index_range, read_single, Vector};
 use std::mem::size_of;
 
 pub const FILETYPE_ID: i32 = i32::from_be_bytes(*b"IDST");
@@ -201,7 +202,7 @@ bitflags! {
 }
 
 impl StudioHeader {
-    pub fn header2_index(&self) -> Option<usize> {
+    pub(crate) fn header2_index(&self) -> Option<usize> {
         (self.studio_hdr2_index > 0)
             .then_some(self.studio_hdr2_index)
             .and_then(|index| usize::try_from(index).ok())

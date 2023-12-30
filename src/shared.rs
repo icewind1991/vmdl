@@ -1,7 +1,7 @@
 use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Deg, Euler, Matrix3, Matrix4, Rad, Rotation3, Vector3};
+use cgmath::{Deg, Euler, Matrix3, Matrix4, Rad, Rotation3, Vector3, Vector4};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
@@ -37,6 +37,12 @@ impl From<Vector3<f32>> for Vector {
 impl Vector {
     pub fn iter(&self) -> impl Iterator<Item = f32> {
         [self.x, self.y, self.z].into_iter()
+    }
+
+    pub fn transformed<T: Into<Matrix4<f32>>>(&self, transform: T) -> Vector {
+        let transform = transform.into();
+        let transformed = transform * Vector4::new(self.x, self.y, self.z, 1.0);
+        transformed.truncate().into()
     }
 }
 

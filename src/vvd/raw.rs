@@ -95,6 +95,7 @@ impl BoneWeights {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct BoneWeight {
     pub bone_id: u8,
     pub weight: f32,

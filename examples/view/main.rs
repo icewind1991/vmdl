@@ -262,7 +262,8 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
 
             let positions: Vec<Vec3> = mesh
                 .vertices()
-                .map(|vertex| map_coords(vertex.position + offset) * 10.0)
+                .map(|vertex| model.vertex_to_world_space(vertex))
+                .map(|position| map_coords(position) * 10.0)
                 .map(|vertex: Vec3| (transforms * vertex.extend(1.0)).truncate())
                 .collect();
             let normals: Vec<Vec3> = mesh.vertices().map(|vertex| vertex.normal.into()).collect();

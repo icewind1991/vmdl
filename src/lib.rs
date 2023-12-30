@@ -148,6 +148,16 @@ impl Model {
     pub fn poses(&self) -> impl Iterator<Item = &PoseParameterDescription> {
         self.mdl.pose_parameters.iter()
     }
+
+    pub fn vertex_to_world_space(&self, vertex: &Vertex) -> Vector {
+        let mut pos = vertex.position;
+        for weights in vertex.bone_weights.weights() {
+            if let Some(bone) = self.mdl.bones.get(weights.bone_id as usize) {
+                pos = pos.transformed(bone.pose_to_bone);
+            }
+        }
+        pos
+    }
 }
 
 pub struct SkinTable<'a> {

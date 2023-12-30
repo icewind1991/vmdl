@@ -19,16 +19,12 @@ fn main() -> Result<(), vmdl::ModelError> {
     let _vvd = Vvd::read(&data)?;
 
     println!("{:?}", mdl.header.flags);
-    dbg!(mdl.local_animations);
-    // for bone in mdl.bones {
-    //     println!(
-    //         "{}: from {} at\n\t{:?}\n\t{:?}",
-    //         bone.name,
-    //         bone.parent,
-    //         bone.quaternion,
-    //         bone.pose_to_bone.rotation()
-    //     );
-    // }
+    for bone in mdl.bones {
+        println!(
+            "{}: from {} at\n\t{:?}\n\t{:?}",
+            bone.name, bone.parent, bone.quaternion, bone.q_alignment
+        );
+    }
 
     // let model = Model::from_parts(mdl, vtx, vvd);
     // for strip in model.vertex_strips() {

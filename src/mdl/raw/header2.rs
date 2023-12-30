@@ -1,6 +1,10 @@
+use crate::ReadableRelative;
+use bytemuck::{Pod, Zeroable};
 use std::ops::Range;
 
-pub struct StudioHHeader2 {
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+pub struct StudioHeader2 {
     source_bone_transform_count: i32,
     source_bone_transform_index: i32,
 
@@ -15,11 +19,13 @@ pub struct StudioHHeader2 {
     bone_flex_driver_count: i32,
     bone_flex_driver_index: i32,
 
-    #[allow(dead_code)]
-    reserved: [i32; 56],
+    _reserved1: [i32; 32],
+    _reserved2: [i32; 24],
 }
 
-impl StudioHHeader2 {
+impl ReadableRelative for StudioHeader2 {}
+
+impl StudioHeader2 {
     pub fn source_bone_transforms(&self) -> Range<i32> {
         self.source_bone_transform_index
             ..(self.source_bone_transform_index + self.source_bone_transform_count)
