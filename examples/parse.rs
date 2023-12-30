@@ -1,3 +1,4 @@
+use cgmath::{Matrix4, Quaternion};
 use std::env::args;
 use std::fs;
 use std::path::PathBuf;
@@ -22,7 +23,10 @@ fn main() -> Result<(), vmdl::ModelError> {
     for bone in mdl.bones {
         println!(
             "{}: from {} at\n\t{:?}\n\t{:?}",
-            bone.name, bone.parent, bone.rot, bone.contents
+            bone.name,
+            bone.parent,
+            bone.quaternion,
+            bone.pose_to_bone.rotation()
         );
     }
 

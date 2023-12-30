@@ -1,4 +1,4 @@
-use crate::{ModelError, Quaternion, RadianEuler, ReadRelative, Readable, Vector};
+use crate::{ModelError, Quaternion, RadianEuler, ReadRelative, Readable, Transform3x4, Vector};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use num_enum::TryFromPrimitive;
@@ -17,7 +17,7 @@ pub struct BoneHeader {
     pub pos_scale: Vector,
     pub rot_scale: Vector,
 
-    pub pose_to_bone: [[f32; 3]; 4], // 3x4 matrix
+    pub pose_to_bone: Transform3x4,
     pub q_alignment: Quaternion,
     pub flags: BoneFlags,
     pub proc_type: i32,
@@ -45,7 +45,7 @@ pub struct Bone {
     pub pos_scale: Vector,
     pub rot_scale: Vector,
 
-    pub pose_to_bone: [[f32; 3]; 4], // 3x4 matrix
+    pub pose_to_bone: Transform3x4,
     pub q_alignment: Quaternion,
     pub flags: BoneFlags,
     pub procedural_rules: Option<ProceduralBone>,

@@ -1,7 +1,7 @@
 use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Deg, Euler, Rad, Rotation3, Vector3};
+use cgmath::{Deg, Euler, Matrix3, Matrix4, Rad, Rotation3, Vector3};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
@@ -197,5 +197,55 @@ impl<const N: usize> FixedString<N> {
 impl<const LEN: usize> Display for FixedString<LEN> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.0, f)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod, PartialEq)]
+#[repr(C)]
+pub struct Transform3x4 {
+    transform: [[f32; 4]; 3],
+}
+
+impl Transform3x4 {
+    pub fn rotation_matrix(&self) -> Matrix3<f32> {
+        Matrix3 {
+            x: Vector3 {
+                x: self.transform[0][0],
+                y: self.transform[0][1],
+                z: self.transform[0][2],
+            },
+            y: Vector3 {
+                x: self.transform[1][0],
+                y: self.transform[1][1],
+                z: self.transform[1][2],
+            },
+            z: Vector3 {
+                x: self.transform[2][0],
+                y: self.transform[2][1],
+                z: self.transform[2][2],
+            },
+        }
+    }
+
+    pub fn rotation(&self) -> Quaternion {
+        cgmath::Quaternion::from(self.rotation_matrix()).into()
+    }
+
+    pub fn translate(&self) -> Vector {
+        [
+            self.transform[0][3],
+            self.transform[1][3],
+            self.transform[2][3],
+        ]
+        .into()
+    }
+}
+
+impl From<Transform3x4> for Matrix4<f32> {
+    fn from(value: Transform3x4) -> Self {
+        let translate = value.translate();
+        let rotate = value.rotation_matrix();
+        let rotate = Matrix4::from(rotate);
+        rotate * Matrix4::from_translation(translate.into())
     }
 }
