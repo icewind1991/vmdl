@@ -10,9 +10,9 @@ pub const MDL_VERSION: i32 = 48;
 pub struct StudioHeader {
     pub id: i32,
     pub version: i32,
-    pub checksum: [u8; 4], // This has to be the same in the phy and vtx files to load!
+    checksum: [u8; 4], // This has to be the same in the phy and vtx files to load!
     pub name: [u8; 64],
-    pub data_length: i32,
+    data_length: i32,
 
     pub eye_position: Vector, // Position of player viewpoint relative to model origin
     pub illumination_position: Vector, // Position (relative to model origin) used to calculate ambient light contribution and cubemap reflections for the entire model.

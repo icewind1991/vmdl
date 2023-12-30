@@ -1,5 +1,6 @@
 use crate::{index_range, ReadableRelative, Vector};
 use bytemuck::{Pod, Zeroable};
+use std::cmp::min;
 use std::mem::size_of;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
@@ -67,7 +68,7 @@ impl ReadableRelative for VertexFileFixup {}
 #[derive(Debug, Clone, Zeroable, Pod, Copy)]
 #[repr(C)]
 pub struct Vertex {
-    pub bone_weights: BoneWeight,
+    pub bone_weights: BoneWeights,
     pub position: Vector,
     pub normal: Vector,
     pub texture_coordinates: [f32; 2],
@@ -79,13 +80,27 @@ static_assertions::const_assert_eq!(size_of::<Vertex>(), 48);
 
 #[derive(Debug, Clone, Zeroable, Pod, Copy)]
 #[repr(C)]
-pub struct BoneWeight {
-    pub weight: [f32; 3],
-    pub bone: [u8; 3],
-    pub bone_count: u8,
+pub struct BoneWeights {
+    weight: [f32; 3],
+    bone: [u8; 3],
+    bone_count: u8,
 }
 
-static_assertions::const_assert_eq!(size_of::<BoneWeight>(), 16);
+impl BoneWeights {
+    pub fn weights(&self) -> impl Iterator<Item = BoneWeight> + '_ {
+        (0..min(self.bone_count as usize, 2)).map(|i| BoneWeight {
+            weight: self.weight[i],
+            bone_id: self.bone[i],
+        })
+    }
+}
+
+pub struct BoneWeight {
+    pub bone_id: u8,
+    pub weight: f32,
+}
+
+static_assertions::const_assert_eq!(size_of::<BoneWeights>(), 16);
 
 #[derive(Debug, Clone, Zeroable, Pod, Copy)]
 #[repr(C)]

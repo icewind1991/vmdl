@@ -2,7 +2,7 @@ mod raw;
 
 use crate::vvd::raw::{VertexFileFixup, VvdHeader};
 use crate::{read_relative, read_relative_iter, ModelError, Readable};
-pub use raw::{BoneWeight, Tangent, Vertex};
+pub use raw::{BoneWeights, Tangent, Vertex};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
