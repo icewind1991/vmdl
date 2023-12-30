@@ -1,12 +1,15 @@
-use crate::Vector;
 use crate::{index_range, FixedString};
+use crate::{ModelError, ReadRelative, Vector};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use std::mem::size_of;
 
+mod animation;
 mod bones;
 pub mod header;
 pub mod header2;
+
+pub use animation::*;
 pub use bones::*;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]

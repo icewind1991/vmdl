@@ -220,7 +220,11 @@ impl StudioHeader {
     }
 
     pub fn local_animation_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.local_animation_offset, self.local_animation_count, 1)
+        index_range(
+            self.local_animation_offset,
+            self.local_animation_count,
+            size_of::<AnimationDescriptionHeader>(),
+        )
     }
 
     pub fn local_sequence_indexes(&self) -> impl Iterator<Item = usize> {
@@ -292,7 +296,11 @@ impl StudioHeader {
     }
 
     pub fn local_pose_param_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.local_pose_param_index, self.local_pose_param_count, 1)
+        index_range(
+            self.local_pose_param_index,
+            self.local_pose_param_count,
+            size_of::<PoseParameterDescriptionHeader>(),
+        )
     }
 
     pub fn ik_lock_indexes(&self) -> impl Iterator<Item = usize> {

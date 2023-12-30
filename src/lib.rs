@@ -6,7 +6,7 @@ pub mod vtx;
 pub mod vvd;
 
 pub use crate::mdl::Mdl;
-use crate::mdl::{Bone, TextureInfo};
+use crate::mdl::{Bone, PoseParameterDescription, TextureInfo};
 pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
@@ -143,6 +143,10 @@ impl Model {
 
     pub fn surface_prop(&self) -> &str {
         self.mdl.surface_prop.as_str()
+    }
+
+    pub fn poses(&self) -> impl Iterator<Item = &PoseParameterDescription> {
+        self.mdl.pose_parameters.iter()
     }
 }
 

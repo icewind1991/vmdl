@@ -23,6 +23,8 @@ pub struct Mdl {
     pub skin_table: Vec<u16>,
     pub surface_prop: String,
     pub key_values: Option<String>,
+    pub local_animations: Vec<AnimationDescription>,
+    pub pose_parameters: Vec<PoseParameterDescription>,
 }
 
 impl Mdl {
@@ -49,6 +51,8 @@ impl Mdl {
         let key_values = (header.key_value_size > 0)
             .then(|| read_single(data, header.key_value_index))
             .transpose()?;
+        let local_animations = read_relative(data, header.local_animation_indexes())?;
+        let pose_parameters = read_relative(data, header.local_pose_param_indexes())?;
 
         Ok(Mdl {
             name,
@@ -70,6 +74,8 @@ impl Mdl {
             header,
             surface_prop,
             key_values,
+            pose_parameters,
+            local_animations,
         })
     }
 }

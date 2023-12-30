@@ -18,17 +18,17 @@ fn main() -> Result<(), vmdl::ModelError> {
     let data = fs::read(path.with_extension("vvd"))?;
     let _vvd = Vvd::read(&data)?;
 
-    println!("{}", mdl.surface_prop);
-    println!("{:?}", mdl.key_values);
-    for bone in mdl.bones {
-        println!(
-            "{}: from {} at\n\t{:?}\n\t{:?}",
-            bone.name,
-            bone.parent,
-            bone.quaternion,
-            bone.pose_to_bone.rotation()
-        );
-    }
+    println!("{:?}", mdl.header.flags);
+    dbg!(mdl.local_animations);
+    // for bone in mdl.bones {
+    //     println!(
+    //         "{}: from {} at\n\t{:?}\n\t{:?}",
+    //         bone.name,
+    //         bone.parent,
+    //         bone.quaternion,
+    //         bone.pose_to_bone.rotation()
+    //     );
+    // }
 
     // let model = Model::from_parts(mdl, vtx, vvd);
     // for strip in model.vertex_strips() {
