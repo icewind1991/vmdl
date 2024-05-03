@@ -75,8 +75,7 @@
       };
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = with pkgs; [
-          rustc
-          cargo
+          toolchain
           bacon
           cargo-edit
           cargo-outdated
