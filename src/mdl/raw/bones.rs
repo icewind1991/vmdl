@@ -315,3 +315,38 @@ bitflags! {
         const CONTENTS_HITBOX =               0x40000000;
     }
 }
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+pub struct SourceBoneTransformHeader {
+    pub sz_name_index: i32,
+
+    pub pre_transform: Transform3x4,
+    pub post_transform: Transform3x4,
+}
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub struct SourceBoneTransform {
+    pub name: String,
+    pub pre_transform: Transform3x4,
+    pub post_transform: Transform3x4,
+}
+
+impl ReadRelative for SourceBoneTransform {
+    type Header = SourceBoneTransformHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
+        let name_bytes =
+            data.get(header.sz_name_index as usize..)
+                .ok_or(ModelError::OutOfBounds {
+                    data: "source bone transform name",
+                    offset: header.sz_name_index as usize,
+                })?;
+
+        Ok(SourceBoneTransform {
+            name: String::read(name_bytes, ())?,
+            pre_transform: header.pre_transform,
+            post_transform: header.post_transform,
+        })
+    }
+}

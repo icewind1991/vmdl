@@ -33,7 +33,7 @@ impl Mdl {
         let header = <StudioHeader as Readable>::read(data)?;
         let header2 = header
             .header2_index()
-            .map(|index| read_single(data, index))
+            .map(|index| read_single::<StudioHeader2, _>(data, index))
             .transpose()?;
         let name = header.name.try_into()?;
         let mut textures = read_relative_iter(data, header.texture_indexes())
@@ -52,6 +52,10 @@ impl Mdl {
 
         let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
         let bones = read_relative(data, header.bone_indexes())?;
+
+        // are these used?
+        let _source_bone_transforms: Vec<SourceBoneTransform> = read_relative(data, header2.unwrap().source_bone_transforms())?;
+
         let surface_prop = read_single(data, header.surface_prop_index)?;
         let key_values = (header.key_value_size > 0)
             .then(|| read_single(data, header.key_value_index))
