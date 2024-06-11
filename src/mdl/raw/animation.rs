@@ -93,7 +93,7 @@ impl ReadRelative for AnimationDescription {
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
         let name_bytes =
-            data.get(dbg!(header.name_offset) as usize..)
+            data.get(header.name_offset as usize..)
                 .ok_or(ModelError::OutOfBounds {
                     data: "animation name",
                     offset: header.name_offset as usize,
