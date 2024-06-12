@@ -133,3 +133,30 @@ bitflags! {
 }
 
 static_assertions::const_assert_eq!(size_of::<StudioAttachmentHeader>(), 23 * 4);
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+#[allow(dead_code)]
+pub struct HitBoxSetHeader {
+    pub name_index: i32,
+    pub hitbox_count: i32,
+    pub hitbox_offset: i32,
+}
+
+impl HitBoxSetHeader {
+    pub fn hitbox_indexes(&self) -> impl Iterator<Item = usize> {
+        index_range(self.hitbox_offset, self.hitbox_count, size_of::<BoundingBoxHeader>())
+    }
+}
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+#[allow(dead_code)]
+pub struct BoundingBoxHeader {
+    pub bone: i32,
+    pub group: i32,
+    pub bounding_box_min: Vector,
+    pub bounding_box_max: Vector,
+    pub name_index: i32,
+    padding: [i32; 8],
+}

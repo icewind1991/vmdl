@@ -31,8 +31,8 @@ pub struct StudioHeader {
     bone_controller_offset: i32,
 
     // mstudiohitboxset_t
-    hitbox_count: i32,
-    hitbox_offset: i32,
+    hitbox_set_count: i32,
+    hitbox_set_offset: i32,
 
     // mstudioanimdesc_t
     local_animation_count: i32,
@@ -216,8 +216,8 @@ impl StudioHeader {
         index_range(self.bone_controller_offset, self.bone_controller_count, 1)
     }
 
-    pub fn hitbox_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.hitbox_offset, self.hitbox_count, 1)
+    pub fn hitbox_set_indexes(&self) -> impl Iterator<Item = usize> {
+        index_range(self.hitbox_set_offset, self.hitbox_set_count, size_of::<HitBoxSetHeader>())
     }
 
     pub fn local_animation_indexes(&self) -> impl Iterator<Item = usize> {

@@ -7,7 +7,7 @@ use std::mem::size_of;
 use bytemuck::{Pod, Zeroable};
 
 use crate::vvd::Vertex;
-use crate::{read_relative, read_relative_iter, read_single, FixedString, ModelError, ReadRelative, Readable, Transform3x4};
+use crate::{read_relative, read_relative_iter, read_single, FixedString, ModelError, ReadRelative, Readable, Transform3x4, Vector};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -26,6 +26,7 @@ pub struct Mdl {
     pub local_animations: Vec<AnimationDescription>,
     pub pose_parameters: Vec<PoseParameterDescription>,
     pub attachments: Vec<StudioAttachment>,
+    pub hit_boxes: Vec<HitBoxSet>,
 }
 
 impl Mdl {
@@ -63,6 +64,7 @@ impl Mdl {
         let local_animations = read_relative(data, header.local_animation_indexes())?;
         let pose_parameters = read_relative(data, header.local_pose_param_indexes())?;
         let attachments = read_relative(data, header.attachment_indexes())?;
+        let hit_boxes = read_relative(data, header.hitbox_set_indexes())?;
 
         Ok(Mdl {
             name,
@@ -88,6 +90,7 @@ impl Mdl {
             pose_parameters,
             local_animations,
             attachments,
+            hit_boxes,
         })
     }
 }
@@ -186,6 +189,46 @@ impl ReadRelative for StudioAttachment {
             flags: header.flags,
             local: header.local,
             local_bone: header.local_bone,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct HitBoxSet {
+    pub name: String,
+    pub boxes: Vec<BoundingBox>
+}
+
+impl ReadRelative for HitBoxSet {
+    type Header = HitBoxSetHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
+        Ok(HitBoxSet {
+            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            boxes: read_relative(data, header.hitbox_indexes())?
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BoundingBox {
+    pub name: String,
+    pub bone: i32,
+    pub group: i32,
+    pub min: Vector,
+    pub max: Vector
+}
+
+impl ReadRelative for BoundingBox {
+    type Header = BoundingBoxHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
+        Ok(BoundingBox {
+            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            bone: header.bone,
+            group: header.group,
+            min: header.bounding_box_min,
+            max: header.bounding_box_max,
         })
     }
 }
