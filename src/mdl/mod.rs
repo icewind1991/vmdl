@@ -4,11 +4,10 @@ pub use raw::header::*;
 pub use raw::header2::*;
 pub use raw::*;
 use std::mem::size_of;
+use bytemuck::{Pod, Zeroable};
 
 use crate::vvd::Vertex;
-use crate::{
-    read_relative, read_relative_iter, read_single, FixedString, ModelError, ReadRelative, Readable,
-};
+use crate::{read_relative, read_relative_iter, read_single, FixedString, ModelError, ReadRelative, Readable, Transform3x4};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -26,6 +25,7 @@ pub struct Mdl {
     pub key_values: Option<String>,
     pub local_animations: Vec<AnimationDescription>,
     pub pose_parameters: Vec<PoseParameterDescription>,
+    pub attachments: Vec<StudioAttachment>,
 }
 
 impl Mdl {
@@ -62,6 +62,7 @@ impl Mdl {
             .transpose()?;
         let local_animations = read_relative(data, header.local_animation_indexes())?;
         let pose_parameters = read_relative(data, header.local_pose_param_indexes())?;
+        let attachments = read_relative(data, header.attachment_indexes())?;
 
         Ok(Mdl {
             name,
@@ -86,6 +87,7 @@ impl Mdl {
             key_values,
             pose_parameters,
             local_animations,
+            attachments,
         })
     }
 }
@@ -163,6 +165,27 @@ impl ReadRelative for TextureInfo {
             name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
             name_index: header.name_index,
             search_paths: Vec::new(),
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct StudioAttachment {
+    pub name: String,
+    pub flags: AttachmentFlags,
+    pub local_bone: i32,
+    pub local: Transform3x4,
+}
+
+impl ReadRelative for StudioAttachment {
+    type Header = StudioAttachmentHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self> {
+        Ok(StudioAttachment {
+            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            flags: header.flags,
+            local: header.local,
+            local_bone: header.local_bone,
         })
     }
 }

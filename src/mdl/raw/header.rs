@@ -265,7 +265,7 @@ impl StudioHeader {
     }
 
     pub fn attachment_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.attachment_offset, self.attachment_count, 1)
+        index_range(self.attachment_offset, self.attachment_count, size_of::<StudioAttachmentHeader>())
     }
 
     pub fn local_node_indexes(&self) -> impl Iterator<Item = usize> {

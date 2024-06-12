@@ -1,4 +1,4 @@
-use crate::{index_range, FixedString};
+use crate::{index_range, FixedString, Transform3x4};
 use crate::{ModelError, ReadRelative, Vector};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
@@ -109,3 +109,27 @@ pub struct MeshTexture {
 }
 
 static_assertions::const_assert_eq!(size_of::<MeshTexture>(), 16 * 4);
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+#[allow(dead_code)]
+pub struct StudioAttachmentHeader {
+    pub name_index: i32,
+    pub flags: AttachmentFlags,
+    pub local_bone: i32,
+    pub local: Transform3x4,
+    pub padding: [i32; 8],
+}
+
+#[derive(Zeroable, Pod, Copy, Clone, Debug)]
+#[repr(C)]
+pub struct AttachmentFlags(i32);
+
+bitflags! {
+    impl AttachmentFlags: i32 {
+        /// Vector48
+        const ATTACHMENT_WORLD_ALIGN = 0x10000;
+    }
+}
+
+static_assertions::const_assert_eq!(size_of::<StudioAttachmentHeader>(), 23 * 4);
