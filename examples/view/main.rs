@@ -251,7 +251,8 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
     let skin = model.skin_tables().nth(skin).unwrap();
 
     let transforms = model.root_transform();
-    let transforms = Matrix4::identity();
+    let transforms = dbg!(model.idle_transform());
+    // let transforms = Matrix4::identity();
 
     let geometries = model
         .meshes()

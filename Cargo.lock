@@ -2804,6 +2804,7 @@ dependencies = [
  "criterion",
  "gltf",
  "gltf-json",
+ "half",
  "iai",
  "image",
  "itertools 0.13.0",

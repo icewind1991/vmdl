@@ -1,6 +1,5 @@
 mod raw;
 
-use bytemuck::{Pod, Zeroable};
 pub use raw::header::*;
 pub use raw::header2::*;
 pub use raw::*;
@@ -63,7 +62,16 @@ impl Mdl {
         let key_values = (header.key_value_size > 0)
             .then(|| read_single(data, header.key_value_index))
             .transpose()?;
-        let local_animations = read_relative(data, header.local_animation_indexes())?;
+        let mut local_animations: Vec<AnimationDescription> =
+            read_relative(data, header.local_animation_indexes())?;
+        local_animations
+            .iter_mut()
+            .flat_map(|desc| desc.animations.iter_mut())
+            .for_each(|animation| {
+                if let Some(bone) = bones.get(animation.bone as usize) {
+                    animation.set_scales(bone);
+                }
+            });
         let animation_block_source: String = read_single(data, header.anim_blocks_name_index)?;
         let animation_blocks = read_relative(data, header.animation_block_indexes())?;
 

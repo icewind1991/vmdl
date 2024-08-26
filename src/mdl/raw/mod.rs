@@ -1,5 +1,5 @@
+use crate::Vector;
 use crate::{index_range, FixedString, Transform3x4};
-use crate::{ModelError, ReadRelative, Vector};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use std::mem::size_of;
@@ -145,7 +145,11 @@ pub struct HitBoxSetHeader {
 
 impl HitBoxSetHeader {
     pub fn hitbox_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.hitbox_offset, self.hitbox_count, size_of::<BoundingBoxHeader>())
+        index_range(
+            self.hitbox_offset,
+            self.hitbox_count,
+            size_of::<BoundingBoxHeader>(),
+        )
     }
 }
 

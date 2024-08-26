@@ -6,7 +6,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
 
-#[derive(Debug, Clone, Copy, Zeroable, Pod, PartialEq)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, PartialEq, Default)]
 #[repr(C)]
 pub struct Vector {
     pub x: f32,
@@ -100,6 +100,17 @@ pub struct Quaternion {
     pub w: f32,
 }
 
+impl Default for Quaternion {
+    fn default() -> Self {
+        Quaternion {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+            w: 0.0,
+        }
+    }
+}
+
 impl From<Quaternion> for cgmath::Quaternion<f32> {
     fn from(q: Quaternion) -> Self {
         [q.x, q.y, q.z, q.w].into()
@@ -123,7 +134,7 @@ impl From<Quaternion> for cgmath::Matrix4<f32> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, Default)]
 #[repr(C)]
 pub struct RadianEuler {
     pub x: f32,
@@ -244,14 +255,10 @@ impl Transform3x4 {
         // mat
         let quat = cgmath::Quaternion::from(mat);
         let euler = Euler::from(quat);
-        #[cfg(debug_assertions)]
-        dbg!(euler);
         let mapped_rotation = cgmath::Quaternion::from_angle_x(-euler.z)
             * cgmath::Quaternion::from_angle_y(euler.y)
             * cgmath::Quaternion::from_angle_z(euler.x);
 
-        #[cfg(debug_assertions)]
-        dbg!(Euler::from(mapped_rotation));
         mapped_rotation.into()
     }
 

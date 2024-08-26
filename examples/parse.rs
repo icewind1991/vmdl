@@ -1,4 +1,4 @@
-use cgmath::{Euler, Matrix4, Quaternion};
+use cgmath::Euler;
 use std::env::args;
 use std::fs;
 use std::path::PathBuf;
@@ -21,16 +21,23 @@ fn main() -> Result<(), vmdl::ModelError> {
 
     // dbg!(&mdl.header2);
 
-    for bone in &mdl.bones {
-        println!(
-            "{}: from {} at\n\t{:?}\n\t{:?}\n\t{:?}",
-            bone.name, bone.parent, bone.rot, bone.q_alignment, bone.pose_to_bone
-        );
-    }
-    dbg!(&mdl.animation_blocks);
+    // for bone in &mdl.bones {
+    //     println!(
+    //         "{}: from {} at\n\t{:?}\n\t{:?}\n\t{:?}",
+    //         bone.name, bone.parent, bone.rot, bone.q_alignment, bone.pose_to_bone
+    //     );
+    // }
+    dbg!(&mdl.local_animations[0]);
+    let transform = mdl
+        .local_animations
+        .first()
+        .map(|a| a.animations[0].rotation(0))
+        .unwrap();
+    dbg!(transform);
+    dbg!(Euler::from(cgmath::Quaternion::from(transform)));
 
     // dbg!(&mdl.attachments);
-    let model = Model::from_parts(mdl, vtx, vvd);
+    let _model = Model::from_parts(mdl, vtx, vvd);
     // dbg!(Euler::from(Quaternion::from(model.root_transform())));
     // for strip in model.vertex_strips() {
     //     for vertex in strip {

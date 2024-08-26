@@ -1,6 +1,5 @@
 use crate::mdl::raw::*;
-use crate::mdl::StudioHeader2;
-use crate::{index_range, read_single, Vector};
+use crate::{index_range, Vector};
 use std::mem::size_of;
 
 pub const FILETYPE_ID: i32 = i32::from_be_bytes(*b"IDST");

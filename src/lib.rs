@@ -1,3 +1,4 @@
+mod compressed_vector;
 mod error;
 mod handle;
 pub mod mdl;
@@ -11,7 +12,7 @@ pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
 use bytemuck::{pod_read_unaligned, Contiguous, Pod};
-use cgmath::{Matrix4, SquareMatrix, Transform, Vector3};
+use cgmath::{Matrix4, SquareMatrix};
 pub use error::*;
 pub use handle::Handle;
 use itertools::Either;
@@ -145,6 +146,20 @@ impl Model {
             .unwrap_or_else(Matrix4::identity)
     }
 
+    pub fn idle_transform(&self) -> Matrix4<f32> {
+        if self.mdl.header.flags.contains(ModelFlags::STATIC_PROP) {
+            return Matrix4::identity();
+        }
+
+        self.mdl
+            .local_animations
+            .first()
+            .and_then(|desc| desc.animations.first())
+            .map(|animation| animation.rotation(0))
+            .map(Matrix4::from)
+            .unwrap_or_else(Matrix4::identity)
+    }
+
     pub fn surface_prop(&self) -> &str {
         self.mdl.surface_prop.as_str()
     }
@@ -154,7 +169,9 @@ impl Model {
     }
 
     pub fn vertex_to_world_space(&self, vertex: &Vertex) -> Vector {
-        vertex.position.transformed(self.root_transform())
+        // vertex.position.transformed(self.root_transform())
+        vertex.position.transformed(self.idle_transform())
+
         // let mut pos = Vector3::from(vertex.position);
         // for weights in vertex.bone_weights.weights() {
         //     if let Some(bone) = self.mdl.bones.get(weights.bone_id as usize) {

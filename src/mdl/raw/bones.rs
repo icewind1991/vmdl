@@ -1,4 +1,6 @@
-use crate::{ModelError, Quaternion, RadianEuler, ReadRelative, Readable, Transform3x4, Vector};
+use crate::{
+    read_single, ModelError, Quaternion, RadianEuler, ReadRelative, Readable, Transform3x4, Vector,
+};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use num_enum::TryFromPrimitive;
@@ -58,19 +60,6 @@ impl ReadRelative for Bone {
     type Header = BoneHeader;
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
-        let name_bytes =
-            data.get(header.sz_name_index as usize..)
-                .ok_or(ModelError::OutOfBounds {
-                    data: "bone name",
-                    offset: header.sz_name_index as usize,
-                })?;
-        let surface_prop_bytes =
-            data.get(header.surface_prop_idx as usize..)
-                .ok_or(ModelError::OutOfBounds {
-                    data: "bone surface property",
-                    offset: header.surface_prop_idx as usize,
-                })?;
-
         let prop_type = ProceduralBoneType::try_from(header.proc_type).ok();
         let proc_bytes = (header.proc_index != 0)
             .then(|| {
@@ -103,7 +92,7 @@ impl ReadRelative for Bone {
             .transpose()?;
 
         Ok(Bone {
-            name: String::read(name_bytes, ())?,
+            name: read_single(data, header.sz_name_index)?,
             parent: header.parent,
             bone_controller: header.bone_controller,
             pos: header.pos,
@@ -116,7 +105,7 @@ impl ReadRelative for Bone {
             flags: header.flags,
             procedural_rules,
             physics_bone: header.physics_bone,
-            surface_prop: String::read(surface_prop_bytes, ())?,
+            surface_prop: read_single(data, header.surface_prop_idx)?,
             contents: header.contents,
         })
     }
@@ -336,15 +325,8 @@ impl ReadRelative for SourceBoneTransform {
     type Header = SourceBoneTransformHeader;
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
-        let name_bytes =
-            data.get(header.sz_name_index as usize..)
-                .ok_or(ModelError::OutOfBounds {
-                    data: "source bone transform name",
-                    offset: header.sz_name_index as usize,
-                })?;
-
         Ok(SourceBoneTransform {
-            name: String::read(name_bytes, ())?,
+            name: read_single(data, header.sz_name_index)?,
             pre_transform: header.pre_transform,
             post_transform: header.post_transform,
         })

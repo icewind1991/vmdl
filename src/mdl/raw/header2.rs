@@ -1,8 +1,8 @@
-use std::mem::size_of;
+use crate::mdl::SourceBoneTransformHeader;
 use crate::{index_range, ReadableRelative};
 use bytemuck::{Pod, Zeroable};
+use std::mem::size_of;
 use std::ops::Range;
-use crate::mdl::{BoneHeader, SourceBoneTransformHeader};
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
@@ -29,7 +29,11 @@ impl ReadableRelative for StudioHeader2 {}
 
 impl StudioHeader2 {
     pub fn source_bone_transforms(&self) -> impl Iterator<Item = usize> {
-        index_range(self.source_bone_transform_index, self.source_bone_transform_count, size_of::<SourceBoneTransformHeader>())
+        index_range(
+            self.source_bone_transform_index,
+            self.source_bone_transform_count,
+            size_of::<SourceBoneTransformHeader>(),
+        )
     }
 
     pub fn bone_flex_drivers(&self) -> Range<i32> {

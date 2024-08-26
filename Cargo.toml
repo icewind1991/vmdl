@@ -18,6 +18,7 @@ tracing = "0.1.40"
 bytemuck = { version = "1.17.0", features = ["derive"] }
 cgmath = "0.18.0"
 num_enum = "0.7.3"
+half = "2.4.1"
 
 [dev-dependencies]
 three-d = { version = "0.14.1", features = ["egui-gui"] }
