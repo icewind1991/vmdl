@@ -27,6 +27,7 @@ fn main() -> Result<(), vmdl::ModelError> {
             bone.name, bone.parent, bone.rot, bone.q_alignment, bone.pose_to_bone
         );
     }
+    dbg!(&mdl.animation_blocks);
 
     // dbg!(&mdl.attachments);
     let model = Model::from_parts(mdl, vtx, vvd);

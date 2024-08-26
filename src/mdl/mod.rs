@@ -27,6 +27,8 @@ pub struct Mdl {
     pub surface_prop: String,
     pub key_values: Option<String>,
     pub local_animations: Vec<AnimationDescription>,
+    pub animation_block_source: String,
+    pub animation_blocks: Vec<AnimationBlock>,
     pub pose_parameters: Vec<PoseParameterDescription>,
     pub attachments: Vec<StudioAttachment>,
     pub hit_boxes: Vec<HitBoxSet>,
@@ -62,6 +64,9 @@ impl Mdl {
             .then(|| read_single(data, header.key_value_index))
             .transpose()?;
         let local_animations = read_relative(data, header.local_animation_indexes())?;
+        let animation_block_source: String = read_single(data, header.anim_blocks_name_index)?;
+        let animation_blocks = read_relative(data, header.animation_block_indexes())?;
+
         let pose_parameters = read_relative(data, header.local_pose_param_indexes())?;
         let attachments = read_relative(data, header.attachment_indexes())?;
         let hit_boxes = read_relative(data, header.hitbox_set_indexes())?;
@@ -89,6 +94,8 @@ impl Mdl {
             key_values,
             pose_parameters,
             local_animations,
+            animation_block_source,
+            animation_blocks,
             attachments,
             hit_boxes,
         })

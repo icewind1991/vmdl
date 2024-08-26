@@ -1,4 +1,5 @@
-use crate::{ModelError, ReadRelative};
+use crate::vvd::Vertex;
+use crate::{ModelError, ReadRelative, ReadableRelative};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use std::mem::size_of;
@@ -86,6 +87,8 @@ pub struct AnimationDescription {
     pub name: String,
     pub fps: f32,
     pub frame_count: i32,
+    pub animation_block: i32,
+    pub animation: i32,
 }
 
 impl ReadRelative for AnimationDescription {
@@ -102,9 +105,20 @@ impl ReadRelative for AnimationDescription {
             name: String::read(name_bytes, ())?,
             fps: header.fps,
             frame_count: header.frame_count,
+            animation_block: header.animation_block,
+            animation: header.animation_index,
         })
     }
 }
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+pub struct AnimationBlock {
+    start: i32,
+    end: i32,
+}
+
+impl ReadableRelative for AnimationBlock {}
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]

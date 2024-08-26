@@ -6,7 +6,7 @@ pub mod vtx;
 pub mod vvd;
 
 pub use crate::mdl::Mdl;
-use crate::mdl::{Bone, PoseParameterDescription, TextureInfo};
+use crate::mdl::{Bone, ModelFlags, PoseParameterDescription, TextureInfo};
 pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
@@ -134,9 +134,10 @@ impl Model {
     }
 
     pub fn root_transform(&self) -> Matrix4<f32> {
-        if self.bones().next().map(|bone| bone.name.as_str()) == Some("static_prop") {
+        if self.mdl.header.flags.contains(ModelFlags::STATIC_PROP) {
             return Matrix4::identity();
         }
+
         self.bones()
             .find(|bone| bone.name != "root")
             .map(|bone| bone.pose_to_bone)

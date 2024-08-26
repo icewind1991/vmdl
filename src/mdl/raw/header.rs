@@ -134,7 +134,7 @@ pub struct StudioHeader {
     // Note that the SDK only compiles as 32-bit, so an int and a pointer are the same size (4 bytes)
 
     // mstudioanimblock_t
-    anim_blocks_name_index: i32,
+    pub(crate) anim_blocks_name_index: i32,
     anim_blocks_count: i32,
     anim_blocks_index: i32,
 
@@ -217,7 +217,11 @@ impl StudioHeader {
     }
 
     pub fn hitbox_set_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.hitbox_set_offset, self.hitbox_set_count, size_of::<HitBoxSetHeader>())
+        index_range(
+            self.hitbox_set_offset,
+            self.hitbox_set_count,
+            size_of::<HitBoxSetHeader>(),
+        )
     }
 
     pub fn local_animation_indexes(&self) -> impl Iterator<Item = usize> {
@@ -265,7 +269,11 @@ impl StudioHeader {
     }
 
     pub fn attachment_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.attachment_offset, self.attachment_count, size_of::<StudioAttachmentHeader>())
+        index_range(
+            self.attachment_offset,
+            self.attachment_count,
+            size_of::<StudioAttachmentHeader>(),
+        )
     }
 
     pub fn local_node_indexes(&self) -> impl Iterator<Item = usize> {
@@ -313,11 +321,11 @@ impl StudioHeader {
     }
 
     pub fn animation_block_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.anim_blocks_index, self.anim_blocks_count, 1)
-    }
-
-    pub fn animation_block_name_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.anim_blocks_name_index, self.anim_blocks_count, 1)
+        index_range(
+            self.anim_blocks_index,
+            self.anim_blocks_count,
+            size_of::<AnimationBlock>(),
+        )
     }
 
     pub fn flex_controller_ui_indexes(&self) -> impl Iterator<Item = usize> {
