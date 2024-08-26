@@ -1,10 +1,11 @@
-use cgmath::{Matrix4, Quaternion};
+use cgmath::{Euler, Matrix4, Quaternion};
 use std::env::args;
 use std::fs;
 use std::path::PathBuf;
 use vmdl::mdl::Mdl;
 use vmdl::vtx::Vtx;
 use vmdl::vvd::Vvd;
+use vmdl::Model;
 
 fn main() -> Result<(), vmdl::ModelError> {
     let mut args = args();
@@ -14,19 +15,22 @@ fn main() -> Result<(), vmdl::ModelError> {
     let data = fs::read(&path)?;
     let mdl = Mdl::read(&data)?;
     let data = fs::read(path.with_extension("dx90.vtx"))?;
-    let _vtx = Vtx::read(&data)?;
+    let vtx = Vtx::read(&data)?;
     let data = fs::read(path.with_extension("vvd"))?;
-    let _vvd = Vvd::read(&data)?;
+    let vvd = Vvd::read(&data)?;
 
-    println!("{:?}", mdl.header.flags);
-    for bone in mdl.bones {
+    // dbg!(&mdl.header2);
+
+    for bone in &mdl.bones {
         println!(
-            "{}: from {} at\n\t{:?}\n\t{:?}",
-            bone.name, bone.parent, bone.quaternion, bone.q_alignment
+            "{}: from {} at\n\t{:?}\n\t{:?}\n\t{:?}",
+            bone.name, bone.parent, bone.rot, bone.q_alignment, bone.pose_to_bone
         );
     }
 
-    // let model = Model::from_parts(mdl, vtx, vvd);
+    // dbg!(&mdl.attachments);
+    let model = Model::from_parts(mdl, vtx, vvd);
+    // dbg!(Euler::from(Quaternion::from(model.root_transform())));
     // for strip in model.vertex_strips() {
     //     for vertex in strip {
     //         println!("{:?}", vertex);

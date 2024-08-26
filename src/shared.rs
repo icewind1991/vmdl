@@ -1,7 +1,7 @@
 use crate::{ModelError, StringError};
 use arrayvec::ArrayString;
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Deg, Euler, Matrix3, Matrix4, Rad, Rotation3, Vector3, Vector4};
+use cgmath::{Deg, Euler, InnerSpace, Matrix3, Matrix4, Rad, Rotation3, Transform, Vector3};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul};
@@ -41,8 +41,7 @@ impl Vector {
 
     pub fn transformed<T: Into<Matrix4<f32>>>(&self, transform: T) -> Vector {
         let transform = transform.into();
-        let transformed = transform * Vector4::new(self.x, self.y, self.z, 1.0);
-        transformed.truncate().into()
+        transform.transform_vector(self.clone().into()).into()
     }
 }
 
@@ -155,9 +154,10 @@ impl From<RadianEuler> for Euler<Deg<f32>> {
 impl From<RadianEuler> for cgmath::Quaternion<f32> {
     fn from(value: RadianEuler) -> Self {
         // angles are applied in roll, pitch, yaw order
-        cgmath::Quaternion::from_angle_y(Rad(value.x))
-            * cgmath::Quaternion::from_angle_x(Rad(value.y))
-            * cgmath::Quaternion::from_angle_z(Rad(-value.z))
+        // additionally the access are remapped
+        cgmath::Quaternion::from_angle_y(Rad(value.y))
+            * cgmath::Quaternion::from_angle_x(Rad(-value.z))
+            * cgmath::Quaternion::from_angle_z(Rad(value.x))
     }
 }
 
@@ -213,24 +213,54 @@ pub struct Transform3x4 {
 }
 
 impl Transform3x4 {
-    pub fn rotation_matrix(&self) -> Matrix3<f32> {
-        Matrix3 {
-            x: Vector3 {
-                x: self.transform[0][0],
-                y: self.transform[0][1],
-                z: self.transform[0][2],
-            },
-            y: Vector3 {
-                x: self.transform[1][0],
-                y: self.transform[1][1],
-                z: self.transform[1][2],
-            },
-            z: Vector3 {
-                x: self.transform[2][0],
-                y: self.transform[2][1],
-                z: self.transform[2][2],
-            },
+    fn x(&self) -> Vector3<f32> {
+        Vector3 {
+            x: self.transform[0][0],
+            y: self.transform[0][1],
+            z: self.transform[0][2],
         }
+    }
+    fn y(&self) -> Vector3<f32> {
+        Vector3 {
+            x: self.transform[1][0],
+            y: self.transform[1][1],
+            z: self.transform[1][2],
+        }
+    }
+    fn z(&self) -> Vector3<f32> {
+        Vector3 {
+            x: self.transform[2][0],
+            y: self.transform[2][1],
+            z: self.transform[2][2],
+        }
+    }
+
+    pub fn rotation_matrix(&self) -> Matrix3<f32> {
+        let mat = Matrix3 {
+            x: self.x(),
+            y: self.y(),
+            z: self.z(),
+        };
+        // mat
+        let quat = cgmath::Quaternion::from(mat);
+        let euler = Euler::from(quat);
+        #[cfg(debug_assertions)]
+        dbg!(euler);
+        let mapped_rotation = cgmath::Quaternion::from_angle_x(-euler.z)
+            * cgmath::Quaternion::from_angle_y(euler.y)
+            * cgmath::Quaternion::from_angle_z(euler.x);
+
+        #[cfg(debug_assertions)]
+        dbg!(Euler::from(mapped_rotation));
+        mapped_rotation.into()
+    }
+
+    pub fn transform(&self, vec: Vector) -> Vector {
+        let vec: Vector3<f32> = [vec.y, vec.z, vec.x].into();
+        let z = vec.dot(self.x()) + self.transform[0][3];
+        let x = vec.dot(self.y()) + self.transform[1][3];
+        let y = vec.dot(self.z()) + self.transform[2][3];
+        Vector { x, y, z }
     }
 
     pub fn rotation(&self) -> Quaternion {

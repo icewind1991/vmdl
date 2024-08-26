@@ -1,13 +1,16 @@
 mod raw;
 
+use bytemuck::{Pod, Zeroable};
 pub use raw::header::*;
 pub use raw::header2::*;
 pub use raw::*;
 use std::mem::size_of;
-use bytemuck::{Pod, Zeroable};
 
 use crate::vvd::Vertex;
-use crate::{read_relative, read_relative_iter, read_single, FixedString, ModelError, ReadRelative, Readable, Transform3x4, Vector};
+use crate::{
+    read_relative, read_relative_iter, read_single, FixedString, ModelError, ReadRelative,
+    Readable, Transform3x4, Vector,
+};
 
 type Result<T> = std::result::Result<T, ModelError>;
 
@@ -53,9 +56,6 @@ impl Mdl {
 
         let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
         let bones = read_relative(data, header.bone_indexes())?;
-
-        // are these used?
-        let _source_bone_transforms: Vec<SourceBoneTransform> = read_relative(data, header2.unwrap().source_bone_transforms())?;
 
         let surface_prop = read_single(data, header.surface_prop_index)?;
         let key_values = (header.key_value_size > 0)
@@ -165,7 +165,11 @@ impl ReadRelative for TextureInfo {
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(TextureInfo {
-            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            name: String::read(
+                data.get(header.name_index as usize..).unwrap_or_default(),
+                (),
+            )?
+            .replace('\\', "/"),
             name_index: header.name_index,
             search_paths: Vec::new(),
         })
@@ -185,7 +189,11 @@ impl ReadRelative for StudioAttachment {
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(StudioAttachment {
-            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            name: String::read(
+                data.get(header.name_index as usize..).unwrap_or_default(),
+                (),
+            )?
+            .replace('\\', "/"),
             flags: header.flags,
             local: header.local,
             local_bone: header.local_bone,
@@ -196,7 +204,7 @@ impl ReadRelative for StudioAttachment {
 #[derive(Debug, Clone)]
 pub struct HitBoxSet {
     pub name: String,
-    pub boxes: Vec<BoundingBox>
+    pub boxes: Vec<BoundingBox>,
 }
 
 impl ReadRelative for HitBoxSet {
@@ -204,8 +212,12 @@ impl ReadRelative for HitBoxSet {
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(HitBoxSet {
-            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
-            boxes: read_relative(data, header.hitbox_indexes())?
+            name: String::read(
+                data.get(header.name_index as usize..).unwrap_or_default(),
+                (),
+            )?
+            .replace('\\', "/"),
+            boxes: read_relative(data, header.hitbox_indexes())?,
         })
     }
 }
@@ -216,7 +228,7 @@ pub struct BoundingBox {
     pub bone: i32,
     pub group: i32,
     pub min: Vector,
-    pub max: Vector
+    pub max: Vector,
 }
 
 impl ReadRelative for BoundingBox {
@@ -224,7 +236,11 @@ impl ReadRelative for BoundingBox {
 
     fn read(data: &[u8], header: Self::Header) -> Result<Self> {
         Ok(BoundingBox {
-            name: String::read(&data[header.name_index as usize..], ())?.replace('\\', "/"),
+            name: String::read(
+                data.get(header.name_index as usize..).unwrap_or_default(),
+                (),
+            )?
+            .replace('\\', "/"),
             bone: header.bone,
             group: header.group,
             min: header.bounding_box_min,

@@ -60,7 +60,7 @@ pub struct AnimationDescriptionHeader {
     _padding: [i32; 6],
 
     animation_block: i32,
-    animation_index: i32,
+    animation_index: i32, // non-zero when anim data isn't in sections
 
     ik_rule_count: i32,
     ik_rule_offset: i32,

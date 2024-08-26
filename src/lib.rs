@@ -11,7 +11,7 @@ pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
 use bytemuck::{pod_read_unaligned, Contiguous, Pod};
-use cgmath::{Matrix4, SquareMatrix};
+use cgmath::{Matrix4, SquareMatrix, Transform, Vector3};
 pub use error::*;
 pub use handle::Handle;
 use itertools::Either;
@@ -134,9 +134,12 @@ impl Model {
     }
 
     pub fn root_transform(&self) -> Matrix4<f32> {
+        if self.bones().next().map(|bone| bone.name.as_str()) == Some("static_prop") {
+            return Matrix4::identity();
+        }
         self.bones()
-            .next()
-            .map(|bone| Quaternion::from(bone.rot))
+            .find(|bone| bone.name != "root")
+            .map(|bone| bone.pose_to_bone)
             .map(Matrix4::from)
             .unwrap_or_else(Matrix4::identity)
     }
@@ -150,13 +153,22 @@ impl Model {
     }
 
     pub fn vertex_to_world_space(&self, vertex: &Vertex) -> Vector {
-        let mut pos = vertex.position;
-        for weights in vertex.bone_weights.weights() {
-            if let Some(bone) = self.mdl.bones.get(weights.bone_id as usize) {
-                pos = pos.transformed(bone.pose_to_bone);
-            }
-        }
-        pos
+        vertex.position.transformed(self.root_transform())
+        // let mut pos = Vector3::from(vertex.position);
+        // for weights in vertex.bone_weights.weights() {
+        //     if let Some(bone) = self.mdl.bones.get(weights.bone_id as usize) {
+        //         let transform = Quaternion::from(bone.rot);
+        //         if bone.parent == 0 {
+        //             if bone.name == "joint1" {
+        //                 dbg!(&bone.name, bone.rot, transform);
+        //             }
+        //             let transform = Matrix4::from(transform);
+        //             pos = transform.transform_vector(pos);
+        //             //     pos = bone.pose_to_bone.transform(pos);
+        //         }
+        //     }
+        // }
+        // pos.into()
     }
 }
 

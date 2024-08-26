@@ -8,7 +8,7 @@ use gltf_json::mesh::{Mode, Primitive, Semantic};
 use gltf_json::texture::Info;
 use gltf_json::validation::Checked::Valid;
 use gltf_json::{Accessor, Extras, Image, Index, Material, Mesh, Texture, Value};
-use image::png::PngEncoder;
+use image::codecs::png::PngEncoder;
 use image::GenericImageView;
 use std::mem::size_of;
 use vmdl::Model;
