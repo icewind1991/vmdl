@@ -212,7 +212,11 @@ impl StudioHeader {
     }
 
     pub fn bone_controller_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.bone_controller_offset, self.bone_controller_count, 1)
+        index_range(
+            self.bone_controller_offset,
+            self.bone_controller_count,
+            size_of::<BoneControllerHeader>(),
+        )
     }
 
     pub fn hitbox_set_indexes(&self) -> impl Iterator<Item = usize> {
@@ -324,6 +328,14 @@ impl StudioHeader {
             self.anim_blocks_index,
             self.anim_blocks_count,
             size_of::<AnimationBlock>(),
+        )
+    }
+
+    pub fn animation_sequence_indexes(&self) -> impl Iterator<Item = usize> {
+        index_range(
+            self.local_seq_offset,
+            self.local_seq_count,
+            size_of::<AnimationSequenceHeader>(),
         )
     }
 

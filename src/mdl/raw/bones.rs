@@ -332,3 +332,69 @@ impl ReadRelative for SourceBoneTransform {
         })
     }
 }
+
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[repr(C)]
+pub struct BoneControllerHeader {
+    bone: i32, // -1 == 0
+    ty: i32,   // X, Y, Z, XR, YR, ZR, M
+    start: f32,
+    end: f32,
+    rest: i32,
+    input_field: i32,
+    _padding: [i32; 8],
+}
+
+#[derive(Debug, Clone)]
+pub enum BoneControllerType {
+    X,
+    Y,
+    Z,
+    XR,
+    YR,
+    ZR,
+    M,
+}
+
+impl TryFrom<i32> for BoneControllerType {
+    type Error = ();
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::X),
+            1 => Ok(Self::Y),
+            2 => Ok(Self::Z),
+            3 => Ok(Self::XR),
+            4 => Ok(Self::YR),
+            5 => Ok(Self::ZR),
+            6 => Ok(Self::M),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+#[repr(C)]
+pub struct BoneController {
+    pub bone: i32,
+    pub ty: BoneControllerType,
+    pub start: f32,
+    pub end: f32,
+    pub rest: i32,
+    pub input_field: i32,
+}
+
+impl ReadRelative for BoneController {
+    type Header = BoneControllerHeader;
+
+    fn read(_data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
+        Ok(BoneController {
+            bone: header.bone,
+            ty: header.ty.try_into().unwrap_or(BoneControllerType::X),
+            start: header.start,
+            end: header.end,
+            rest: header.rest,
+            input_field: header.input_field,
+        })
+    }
+}

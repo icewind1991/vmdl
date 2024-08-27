@@ -1,8 +1,8 @@
 use crate::compressed_vector::{Quaternion48, Quaternion64, Vector48};
 use crate::mdl::Bone;
 use crate::{
-    read_single, ModelError, Quaternion, RadianEuler, ReadRelative, Readable, ReadableRelative,
-    Vector,
+    index_range, read_relative, read_single, ModelError, Quaternion, RadianEuler, ReadRelative,
+    Readable, ReadableRelative, Vector,
 };
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
@@ -382,4 +382,110 @@ fn read_animation(
         },
         header.next_offset as usize,
     ))
+}
+
+#[derive(Zeroable, Pod, Copy, Clone, Debug, Default)]
+#[repr(C)]
+pub struct AnimationSequenceHeader {
+    base: i32,
+    label_index: i32,
+    activity_name_index: i32,
+    flags: i32, // todo
+    activity: i32,
+    weight: i32,
+    event_count: i32,
+    event_offset: i32,
+    bounding_box_min: Vector,
+    bounding_box_max: Vector,
+    blend_count: i32,
+    animation_index_index: i32,
+    movement_index: i32,
+    group_size: [i32; 2],
+    param_index: [i32; 2],
+    param_start: [i32; 2],
+    param_end: [i32; 2],
+    param_parent: i32,
+
+    fade_in_time: f32,
+    fade_out_time: f32,
+
+    local_entry_node: i32,
+    local_exit_node: i32,
+    node_flags: i32,
+
+    entry_phase: f32,
+    exit_phase: f32,
+
+    last_frame: f32,
+
+    next_sequence: i32,
+    pose: i32,
+
+    ik_rule_count: i32,
+
+    auto_layer_count: i32,
+    auto_layer_offset: i32,
+
+    weight_list_offset: i32,
+
+    pose_key_offset: i32,
+
+    ik_lock_count: i32,
+    ik_lock_offset: i32,
+
+    key_value_offset: i32,
+    key_value_size: i32,
+
+    cycle_pose_offset: i32,
+
+    activity_modifiers_offset: i32,
+    activity_modifiers_count: i32,
+
+    _padding: [i32; 5],
+}
+
+impl AnimationSequenceHeader {
+    fn bone_weight_indices(&self) -> impl Iterator<Item = usize> {
+        // weight/bone count isn't stored here, so we assume the next indexed values is stored after it in the file
+        // we trim down the list of weights later
+        let other_indices = [
+            self.pose_key_offset,
+            self.ik_lock_offset,
+            self.key_value_offset,
+            self.activity_modifiers_offset,
+        ];
+        let weight_count = if let Some(next_index) = other_indices
+            .iter()
+            .copied()
+            .find(|index| *index > self.weight_list_offset)
+        {
+            (next_index - self.weight_list_offset) as usize / size_of::<f32>()
+        } else {
+            0
+        };
+        index_range(
+            self.weight_list_offset,
+            weight_count as i32,
+            size_of::<f32>(),
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AnimationSequence {
+    pub name: String,
+    pub label: String,
+    pub bone_weights: Vec<f32>,
+}
+
+impl ReadRelative for AnimationSequence {
+    type Header = AnimationSequenceHeader;
+
+    fn read(data: &[u8], header: Self::Header) -> Result<Self, ModelError> {
+        Ok(AnimationSequence {
+            name: read_single(data, header.activity_name_index)?,
+            label: read_single(data, header.label_index)?,
+            bone_weights: read_relative(data, header.bone_weight_indices())?,
+        })
+    }
 }

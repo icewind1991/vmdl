@@ -19,6 +19,7 @@ pub struct Mdl {
     pub header: StudioHeader,
     pub header2: Option<StudioHeader2>,
     pub bones: Vec<Bone>,
+    pub bone_controllers: Vec<BoneController>,
     pub body_parts: Vec<BodyPart>,
     pub textures: Vec<TextureInfo>,
     pub texture_paths: Vec<String>,
@@ -28,6 +29,7 @@ pub struct Mdl {
     pub local_animations: Vec<AnimationDescription>,
     pub animation_block_source: String,
     pub animation_blocks: Vec<AnimationBlock>,
+    pub animation_sequences: Vec<AnimationSequence>,
     pub pose_parameters: Vec<PoseParameterDescription>,
     pub attachments: Vec<StudioAttachment>,
     pub hit_boxes: Vec<HitBoxSet>,
@@ -57,6 +59,7 @@ impl Mdl {
 
         let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
         let bones = read_relative(data, header.bone_indexes())?;
+        let bone_controllers = read_relative(data, header.bone_controller_indexes())?;
 
         let surface_prop = read_single(data, header.surface_prop_index)?;
         let key_values = (header.key_value_size > 0)
@@ -74,6 +77,11 @@ impl Mdl {
             });
         let animation_block_source: String = read_single(data, header.anim_blocks_name_index)?;
         let animation_blocks = read_relative(data, header.animation_block_indexes())?;
+        let mut animation_sequences: Vec<AnimationSequence> =
+            read_relative(data, header.animation_sequence_indexes())?;
+        animation_sequences
+            .iter_mut()
+            .for_each(|seq| seq.bone_weights.truncate(bones.len()));
 
         let pose_parameters = read_relative(data, header.local_pose_param_indexes())?;
         let attachments = read_relative(data, header.attachment_indexes())?;
@@ -82,6 +90,7 @@ impl Mdl {
         Ok(Mdl {
             name,
             bones,
+            bone_controllers,
             body_parts: header
                 .body_part_indexes()
                 .map(|index| {
@@ -104,6 +113,7 @@ impl Mdl {
             local_animations,
             animation_block_source,
             animation_blocks,
+            animation_sequences,
             attachments,
             hit_boxes,
         })
