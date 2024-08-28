@@ -43,11 +43,21 @@ pub struct Quaternion48 {
     z: u16,
 }
 
+impl Default for Quaternion48 {
+    fn default() -> Self {
+        Quaternion48 {
+            x: 32768,
+            y: 32768,
+            z: 16384,
+        }
+    }
+}
+
 impl ReadableRelative for Quaternion48 {}
 
 fn calc_w(x: f32, y: f32, z: f32, w_neg: bool) -> f32 {
     let w_sign = if w_neg { -1.0 } else { 1.0 };
-    f32::sqrt(1.0 - ((x * x) - (y * y) - (z * z))) * w_sign
+    f32::sqrt(1.0 - (x * x) - (y * y) - (z * z)) * w_sign
 }
 
 impl Quaternion48 {
@@ -92,14 +102,13 @@ pub struct Quaternion64(u64);
 impl ReadableRelative for Quaternion64 {}
 
 impl Quaternion64 {
-    const MASK_21_BIT: u64 = 0b111111111111111111111;
+    const MASK_21_BIT: u64 = 0b11111_11111111_11111111;
     const W_NEG_MASK: u64 = 0x80_00_00_00_00_00_00_00;
 
     fn val(&self, offset: i32) -> f32 {
-        let raw = (self.0 >> offset) & Self::MASK_21_BIT;
+        let raw = ((self.0) >> offset) & Self::MASK_21_BIT;
         (raw as f32 - 1048576.0) / 1048576.5
     }
-
     pub fn x(&self) -> f32 {
         self.val(0)
     }
@@ -121,7 +130,7 @@ impl Quaternion64 {
 
 impl From<Quaternion64> for Quaternion {
     fn from(value: Quaternion64) -> Self {
-        let normalized = Vector4::new(value.x(), value.y(), value.z(), value.w()).normalize();
+        let normalized = Vector4::new(value.x(), value.y(), value.z(), value.w());
         Quaternion {
             x: normalized.x,
             y: normalized.y,

@@ -130,7 +130,30 @@ impl From<cgmath::Quaternion<f32>> for Quaternion {
 
 impl From<Quaternion> for cgmath::Matrix4<f32> {
     fn from(q: Quaternion) -> Self {
+        // cgmath::Quaternion::from(Quaternion {
+        //     x: q.z,
+        //     y: -q.y,
+        //     z: q.x,
+        //     w: q.w,
+        // })
+        // .into()
         cgmath::Quaternion::from(q).into()
+    }
+}
+
+impl Mul for Quaternion {
+    type Output = Quaternion;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        (cgmath::Quaternion::from(self) * cgmath::Quaternion::from(rhs)).into()
+    }
+}
+
+impl Mul<RadianEuler> for Quaternion {
+    type Output = Quaternion;
+
+    fn mul(self, rhs: RadianEuler) -> Self::Output {
+        (cgmath::Quaternion::from(self) * cgmath::Quaternion::from(rhs)).into()
     }
 }
 
@@ -165,14 +188,19 @@ impl From<RadianEuler> for Euler<Deg<f32>> {
 impl From<RadianEuler> for cgmath::Quaternion<f32> {
     fn from(value: RadianEuler) -> Self {
         // angles are applied in roll, pitch, yaw order
-        // additionally the access are remapped
         cgmath::Quaternion::from_angle_y(Rad(value.y))
-            * cgmath::Quaternion::from_angle_x(Rad(-value.z))
-            * cgmath::Quaternion::from_angle_z(Rad(value.x))
+            * cgmath::Quaternion::from_angle_x(Rad(-value.x))
+            * cgmath::Quaternion::from_angle_z(Rad(value.z))
     }
 }
 
 impl From<RadianEuler> for Quaternion {
+    fn from(value: RadianEuler) -> Self {
+        cgmath::Quaternion::from(value).into()
+    }
+}
+
+impl From<RadianEuler> for Matrix4<f32> {
     fn from(value: RadianEuler) -> Self {
         cgmath::Quaternion::from(value).into()
     }

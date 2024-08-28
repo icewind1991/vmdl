@@ -6,6 +6,7 @@ use crate::{
 };
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
+use cgmath::{Matrix4, SquareMatrix};
 use std::mem::size_of;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
@@ -84,8 +85,18 @@ static_assertions::const_assert_eq!(size_of::<AnimationDescriptionHeader>(), 100
 pub struct AnimationDescription {
     pub name: String,
     pub fps: f32,
-    pub frame_count: i32,
+    pub frame_count: usize,
     pub animations: Vec<Animation>,
+}
+
+impl AnimationDescription {
+    pub fn get_bone_transform(&self, bone: u8, frame: usize) -> Matrix4<f32> {
+        let Some(animation) = self.animations.iter().find(|anim| anim.bone == bone) else {
+            return Matrix4::identity();
+        };
+        Matrix4::from_translation(animation.position(frame).into())
+            * Matrix4::from(animation.rotation(frame))
+    }
 }
 
 impl ReadRelative for AnimationDescription {
@@ -110,7 +121,7 @@ impl ReadRelative for AnimationDescription {
         Ok(AnimationDescription {
             name: read_single(data, header.name_offset)?,
             fps: header.fps,
-            frame_count: header.frame_count,
+            frame_count: header.frame_count as usize,
             animations,
         })
     }
@@ -234,20 +245,43 @@ impl<'a> FrameValues<'a> {
 
 #[derive(Clone, Debug)]
 pub enum RotationData {
-    Quaternion48(Quaternion48),
-    Quaternion64(Quaternion64),
-    RotationValues(Vec<RadianEuler>),
+    Quaternion48(Quaternion),
+    Quaternion64(Quaternion),
+    Animated(Vec<RadianEuler>),
     None,
+}
+
+impl From<Quaternion48> for RotationData {
+    fn from(value: Quaternion48) -> Self {
+        let q = Quaternion::from(value);
+        RotationData::Quaternion48(q)
+    }
+}
+
+impl From<Quaternion64> for RotationData {
+    fn from(value: Quaternion64) -> Self {
+        let q = Quaternion::from(value);
+        RotationData::Quaternion64(q)
+    }
+}
+
+impl From<Vec<RadianEuler>> for RotationData {
+    fn from(value: Vec<RadianEuler>) -> Self {
+        // axis get fixed up when applying the scale
+        RotationData::Animated(value)
+    }
 }
 
 impl RotationData {
     pub fn rotation(&self, frame: usize) -> Quaternion {
         match self {
-            RotationData::Quaternion48(q) => Quaternion::from(*q),
-            RotationData::Quaternion64(q) => Quaternion::from(*q),
-            RotationData::RotationValues(values) => {
-                values.get(frame).copied().unwrap_or_default().into()
-            }
+            RotationData::Quaternion48(q) => *q,
+            RotationData::Quaternion64(q) => *q,
+            RotationData::Animated(values) => values
+                .get(frame)
+                .copied()
+                .unwrap_or_else(|| values.last().copied().unwrap_or_default())
+                .into(),
             RotationData::None => Quaternion::default(),
         }
     }
@@ -256,18 +290,19 @@ impl RotationData {
         match self {
             RotationData::Quaternion48(_) => size_of::<Quaternion48>(),
             RotationData::Quaternion64(_) => size_of::<Quaternion64>(),
-            RotationData::RotationValues(_) => size_of::<AnimationValuePointer>(),
+            RotationData::Animated(_) => size_of::<AnimationValuePointer>(),
             RotationData::None => 0,
         }
     }
 
     fn set_scale(&mut self, scale: Vector) {
-        if let RotationData::RotationValues(values) = self {
+        if let RotationData::Animated(values) = self {
             values.iter_mut().for_each(|value| {
+                // scale and fixup the angles
                 *value = RadianEuler {
-                    x: value.x * scale.x,
-                    y: value.y * scale.y,
-                    z: value.z * scale.z,
+                    y: value.x * scale.x,
+                    z: value.y * scale.y,
+                    x: value.z * scale.z,
                 }
             });
         }
@@ -317,6 +352,10 @@ impl Animation {
         self.rotation_data.rotation(frame)
     }
 
+    pub(crate) fn rotation_looks_valid(&self) -> bool {
+        true
+    }
+
     pub fn position(&self, frame: usize) -> Vector {
         self.position_data.position(frame)
     }
@@ -343,17 +382,17 @@ fn read_animation(
     let offset = size_of::<AnimationHeader>();
 
     let rotation_data = if header.flags.contains(AnimationFlags::STUDIO_ANIM_RAWROT) {
-        RotationData::Quaternion48(read_single(data, offset)?)
+        RotationData::from(read_single::<Quaternion48, _>(data, offset)?)
     } else if header.flags.contains(AnimationFlags::STUDIO_ANIM_RAWROT2) {
-        RotationData::Quaternion64(read_single(data, offset)?)
+        RotationData::from(read_single::<Quaternion64, _>(data, offset)?)
     } else if header.flags.contains(AnimationFlags::STUDIO_ANIM_ANIMROT) {
         let pointers: AnimationValuePointer = read_single(data, offset)?;
         let value_data = &data[offset..];
-        let values = (0..frames)
+        let values: Vec<RadianEuler> = (0..frames)
             .map(|frame| read_animation_values(value_data, frame, pointers))
-            .map(|r| r.map(|[x, y, z]| RadianEuler { x, y, z }))
+            .map(|r| r.map(|[x, y, z]| RadianEuler { x, z, y }))
             .collect::<Result<_, ModelError>>()?;
-        RotationData::RotationValues(values)
+        RotationData::from(values)
     } else {
         RotationData::None
     };
@@ -362,8 +401,8 @@ fn read_animation(
     let position_data = if header.flags.contains(AnimationFlags::STUDIO_ANIM_RAWPOS) {
         PositionData::Vector48(read_single(data, position_offset)?)
     } else if header.flags.contains(AnimationFlags::STUDIO_ANIM_ANIMPOS) {
-        let pointers: AnimationValuePointer = read_single(data, offset)?;
-        let value_data = &data[offset..];
+        let pointers: AnimationValuePointer = read_single(data, position_offset)?;
+        let value_data = &data[position_offset..];
         let values = (0..frames)
             .map(|frame| read_animation_values(value_data, frame, pointers))
             .map(|r| r.map(Vector::from))

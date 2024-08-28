@@ -20,6 +20,7 @@ pub struct Mdl {
     pub header2: Option<StudioHeader2>,
     pub bones: Vec<Bone>,
     pub bone_controllers: Vec<BoneController>,
+    pub body_table_by_name: Vec<u8>,
     pub body_parts: Vec<BodyPart>,
     pub textures: Vec<TextureInfo>,
     pub texture_paths: Vec<String>,
@@ -60,6 +61,7 @@ impl Mdl {
         let skin_table = read_relative::<u16, _>(data, header.skin_reference_indexes())?;
         let bones = read_relative(data, header.bone_indexes())?;
         let bone_controllers = read_relative(data, header.bone_controller_indexes())?;
+        let body_table_by_name = read_relative(data, header.bone_table_by_name_indexes())?;
 
         let surface_prop = read_single(data, header.surface_prop_index)?;
         let key_values = (header.key_value_size > 0)
@@ -91,6 +93,7 @@ impl Mdl {
             name,
             bones,
             bone_controllers,
+            body_table_by_name,
             body_parts: header
                 .body_part_indexes()
                 .map(|index| {

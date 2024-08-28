@@ -139,8 +139,7 @@ pub struct StudioHeader {
 
     anim_block_model: i32, // Placeholder for mutable-void*
 
-    // Points to a series of bytes?
-    bone_table_name_index: i32,
+    bone_table_by_name_index: i32,
 
     vertex_base: i32, // Placeholder for void*
     offset_base: i32, // Placeholder for void*
@@ -155,9 +154,9 @@ pub struct StudioHeader {
     num_allowed_root_lods: u8,
 
     #[allow(dead_code)]
-    unused0: u8, // ??
+    unused0: u8,
     #[allow(dead_code)]
-    unused1: i32, // ??
+    unused1: i32,
 
     flex_controller_ui_count: i32,
     flex_controller_ui_index: i32,
@@ -219,6 +218,14 @@ impl StudioHeader {
         )
     }
 
+    pub fn bone_table_by_name_indexes(&self) -> impl Iterator<Item = usize> {
+        index_range(
+            self.bone_table_by_name_index,
+            self.bone_count,
+            size_of::<u8>(),
+        )
+    }
+
     pub fn hitbox_set_indexes(&self) -> impl Iterator<Item = usize> {
         index_range(
             self.hitbox_set_offset,
@@ -233,10 +240,6 @@ impl StudioHeader {
             self.local_animation_count,
             size_of::<AnimationDescriptionHeader>(),
         )
-    }
-
-    pub fn local_sequence_indexes(&self) -> impl Iterator<Item = usize> {
-        index_range(self.local_seq_offset, self.local_seq_count, 1)
     }
 
     pub fn texture_indexes(&self) -> impl Iterator<Item = usize> {

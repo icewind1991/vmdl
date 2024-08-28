@@ -7,12 +7,12 @@ pub mod vtx;
 pub mod vvd;
 
 pub use crate::mdl::Mdl;
-use crate::mdl::{Bone, ModelFlags, PoseParameterDescription, TextureInfo};
+use crate::mdl::{AnimationDescription, Bone, ModelFlags, PoseParameterDescription, TextureInfo};
 pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
 use bytemuck::{pod_read_unaligned, Contiguous, Pod};
-use cgmath::{Matrix4, SquareMatrix};
+use cgmath::{Matrix4, SquareMatrix, Transform, Vector3};
 pub use error::*;
 pub use handle::Handle;
 use itertools::Either;
@@ -85,6 +85,10 @@ impl Model {
         }
     }
 
+    pub fn animations(&self) -> impl Iterator<Item = &AnimationDescription> {
+        self.mdl.local_animations.iter()
+    }
+
     pub fn meshes(&self) -> impl Iterator<Item = Mesh> {
         let mdl_meshes = self
             .mdl
@@ -140,9 +144,13 @@ impl Model {
         }
 
         self.bones()
-            .find(|bone| bone.name != "root")
-            .map(|bone| bone.pose_to_bone)
-            .map(Matrix4::from)
+            .next()
+            .map(|bone| {
+                // let inv = Matrix4::from(bone.pose_to_bone)
+                //     .inverse_transform()
+                //     .unwrap();
+                Matrix4::from(bone.rot)
+            })
             .unwrap_or_else(Matrix4::identity)
     }
 
@@ -153,8 +161,9 @@ impl Model {
 
         self.mdl
             .local_animations
-            .first()
-            .and_then(|desc| desc.animations.first())
+            .iter()
+            .filter_map(|desc| desc.animations.iter().find(|animation| animation.bone == 0))
+            .find(|anim| anim.rotation_looks_valid())
             .map(|animation| animation.rotation(0))
             .map(Matrix4::from)
             .unwrap_or_else(Matrix4::identity)
@@ -169,24 +178,23 @@ impl Model {
     }
 
     pub fn vertex_to_world_space(&self, vertex: &Vertex) -> Vector {
-        // vertex.position.transformed(self.root_transform())
-        vertex.position.transformed(self.idle_transform())
+        let transform = self.idle_transform() * self.root_transform();
+        transform
+            .transform_vector(Vector3::from(vertex.position))
+            .into()
+    }
 
-        // let mut pos = Vector3::from(vertex.position);
-        // for weights in vertex.bone_weights.weights() {
-        //     if let Some(bone) = self.mdl.bones.get(weights.bone_id as usize) {
-        //         let transform = Quaternion::from(bone.rot);
-        //         if bone.parent == 0 {
-        //             if bone.name == "joint1" {
-        //                 dbg!(&bone.name, bone.rot, transform);
-        //             }
-        //             let transform = Matrix4::from(transform);
-        //             pos = transform.transform_vector(pos);
-        //             //     pos = bone.pose_to_bone.transform(pos);
-        //         }
-        //     }
-        // }
-        // pos.into()
+    fn bone_transform(
+        &self,
+        bone_id: u8,
+        bone: &Bone,
+        animation: &AnimationDescription,
+        weight: f32,
+        frame: usize,
+    ) -> Matrix4<f32> {
+        let animation_transform = weight * animation.get_bone_transform(bone_id, frame);
+        let bone_origin = Matrix4::from(bone.pose_to_bone);
+        bone_origin.inverse_transform().unwrap() * animation_transform * bone_origin
     }
 }
 
