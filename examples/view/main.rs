@@ -252,7 +252,7 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
 
             let positions: Vec<Vec3> = mesh
                 .vertices()
-                .map(|vertex| model.vertex_to_world_space(vertex))
+                .map(|vertex| model.apply_root_transform(vertex.position))
                 .map(|position| map_coords(position) * 10.0)
                 .map(|vertex: Vec3| (transforms * vertex.extend(1.0)).truncate())
                 .collect();

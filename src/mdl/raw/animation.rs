@@ -225,10 +225,7 @@ impl<'a> FrameValues<'a> {
                 data: &self.data[offset..],
             };
             if next_header.total == 0 {
-                return Err(ModelError::OutOfBounds {
-                    data: "animation value",
-                    offset,
-                });
+                return Ok(0);
             }
             next.get(index - self.header.total)
         } else {

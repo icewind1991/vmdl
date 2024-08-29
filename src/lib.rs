@@ -172,11 +172,9 @@ impl Model {
         self.mdl.pose_parameters.iter()
     }
 
-    pub fn vertex_to_world_space(&self, vertex: &Vertex) -> Vector {
+    pub fn apply_root_transform(&self, vec: Vector) -> Vector {
         let transform = self.idle_transform() * self.root_transform();
-        transform
-            .transform_vector(Vector3::from(vertex.position))
-            .into()
+        transform.transform_vector(Vector3::from(vec)).into()
     }
 }
 
