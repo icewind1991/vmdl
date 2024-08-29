@@ -145,12 +145,7 @@ impl Model {
 
         self.bones()
             .next()
-            .map(|bone| {
-                // let inv = Matrix4::from(bone.pose_to_bone)
-                //     .inverse_transform()
-                //     .unwrap();
-                Matrix4::from(bone.rot)
-            })
+            .map(|bone| Matrix4::from(bone.rot))
             .unwrap_or_else(Matrix4::identity)
     }
 
@@ -182,19 +177,6 @@ impl Model {
         transform
             .transform_vector(Vector3::from(vertex.position))
             .into()
-    }
-
-    fn bone_transform(
-        &self,
-        bone_id: u8,
-        bone: &Bone,
-        animation: &AnimationDescription,
-        weight: f32,
-        frame: usize,
-    ) -> Matrix4<f32> {
-        let animation_transform = weight * animation.get_bone_transform(bone_id, frame);
-        let bone_origin = Matrix4::from(bone.pose_to_bone);
-        bone_origin.inverse_transform().unwrap() * animation_transform * bone_origin
     }
 }
 

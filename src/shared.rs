@@ -41,7 +41,7 @@ impl Vector {
 
     pub fn transformed<T: Into<Matrix4<f32>>>(&self, transform: T) -> Vector {
         let transform = transform.into();
-        transform.transform_vector(self.clone().into()).into()
+        transform.transform_vector((*self).into()).into()
     }
 }
 

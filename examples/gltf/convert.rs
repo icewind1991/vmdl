@@ -9,7 +9,7 @@ use gltf_json::texture::Info;
 use gltf_json::validation::Checked::Valid;
 use gltf_json::{Accessor, Extras, Image, Index, Material, Mesh, Texture, Value};
 use image::codecs::png::PngEncoder;
-use image::GenericImageView;
+use image::ImageEncoder;
 use std::mem::size_of;
 use vmdl::Model;
 
@@ -287,7 +287,7 @@ fn push_texture(
     let mut png_buffer = Vec::new();
     let encoder = PngEncoder::new(&mut png_buffer);
     encoder
-        .encode(
+        .write_image(
             image.as_bytes(),
             image.width(),
             image.height(),

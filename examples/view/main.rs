@@ -5,13 +5,11 @@ mod material;
 
 use crate::error::Error;
 use crate::material::{load_material_fallback, MaterialData};
-use image::GenericImageView;
 use std::env::args_os;
 use std::path::PathBuf;
 use tf_asset_loader::Loader;
-use thiserror::Error;
 use three_d::*;
-use vmdl::{Model, Vector};
+use vmdl::Model;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[allow(missing_docs)]
@@ -241,13 +239,6 @@ pub fn map_coords<C: Into<Vec3>>(vec: C) -> Vec3 {
 }
 
 fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
-    let bounds = model.bounding_box();
-    let offset = Vector {
-        x: -(bounds.1.x + bounds.0.x) / 2.0,
-        y: -(bounds.1.y + bounds.0.y) / 2.0,
-        z: -(bounds.1.z + bounds.0.z) / 2.0,
-    };
-
     let skin = model.skin_tables().nth(skin).unwrap();
 
     let transforms = Matrix4::identity();

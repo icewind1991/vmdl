@@ -20,6 +20,7 @@ pub fn load_material_fallback(name: &str, search_dirs: &[String], loader: &Loade
 }
 
 #[derive(Default, Debug)]
+#[allow(dead_code)]
 pub struct MaterialData {
     pub name: String,
     pub path: String,
