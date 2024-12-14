@@ -5,4 +5,4 @@ fn fuzz(data: &[u8]) {
     let _ = vmdl::Vtx::read(data).ok();
 }
 
-fuzz_target!(|data: &[u8]| {fuzz(data)});
+fuzz_target!(|data: &[u8]| { fuzz(data) });
