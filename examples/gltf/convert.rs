@@ -291,7 +291,7 @@ fn push_texture(
             image.as_bytes(),
             image.width(),
             image.height(),
-            image.color(),
+            image.color().into(),
         )
         .expect("failed to encode");
 
