@@ -5,10 +5,18 @@ mod material;
 
 use crate::error::Error;
 use crate::material::{load_material_fallback, MaterialData};
+use cgmath::{vec3, Matrix4, SquareMatrix};
 use std::env::args_os;
 use std::path::PathBuf;
 use tf_asset_loader::Loader;
-use three_d::*;
+use three_d::{
+    AmbientLight, Camera, ClearState, ColorMaterial, CpuMaterial, CpuMesh, CpuModel, CpuTexture,
+    DepthMaterial, DirectionalLight, FrameOutput, Light, NormalMaterial, ORMMaterial, OrbitControl,
+    PhysicalMaterial, PositionMaterial, UVMaterial, Vec2, Vec4, Window, WindowSettings,
+};
+use three_d_asset::{
+    degrees, Geometry, Mat4, Positions, Primitive, Srgba, TextureData, Vec3, Viewport,
+};
 use vmdl::Model;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -51,7 +59,7 @@ fn main() -> Result<(), Error> {
         300.0,
     );
 
-    let mut control = OrbitControl::new(*camera.target(), 1.0, 100.0);
+    let mut control = OrbitControl::new(camera.target(), 1.0, 100.0);
     let mut gui = three_d::GUI::new(&context);
 
     let loader = Loader::new().expect("loader");
@@ -60,7 +68,7 @@ fn main() -> Result<(), Error> {
     let cpu_models = (0..skin_count).map(|skin| model_to_model(&source_model, &loader, skin));
 
     let ph_material = PhysicalMaterial {
-        albedo: Color {
+        albedo: Srgba {
             r: 128,
             g: 128,
             b: 128,
@@ -74,11 +82,11 @@ fn main() -> Result<(), Error> {
         .collect();
 
     let mut directional = [
-        DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(1.0, -1.0, 0.0)),
-        DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(1.0, 1.0, 0.0)),
+        DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(1.0, -1.0, 0.0)),
+        DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(1.0, 1.0, 0.0)),
     ];
     let mut ambient = AmbientLight {
-        color: Color::WHITE,
+        color: Srgba::WHITE,
         intensity: 0.2,
         ..Default::default()
     };
@@ -154,7 +162,9 @@ fn main() -> Result<(), Error> {
 
         // Draw
         {
-            camera.set_perspective_projection(degrees(fov), camera.z_near(), camera.z_far());
+            let z_near = camera.z_near();
+            let z_far = camera.z_far();
+            camera.set_perspective_projection(degrees(fov), z_near, z_far);
             if shadows_enabled {
                 directional[0].generate_shadow_map(1024, model.iter().map(|gm| &gm.geometry));
                 directional[1].generate_shadow_map(1024, model.iter().map(|gm| &gm.geometry));
@@ -216,7 +226,8 @@ fn main() -> Result<(), Error> {
                 ),
                 DebugType::NONE => target.render(&camera, model, lights),
             }
-            .write(|| gui.render());
+            .write(|| gui.render())
+            .expect("failed to render");
         }
 
         let _ = change;
@@ -246,10 +257,6 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
     let geometries = model
         .meshes()
         .map(|mesh| {
-            let texture = skin
-                .texture(mesh.material_index())
-                .expect("texture out of bounds");
-
             let positions: Vec<Vec3> = mesh
                 .vertices()
                 .map(|vertex| model.apply_root_transform(vertex.position))
@@ -263,13 +270,19 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
                 .collect();
             let tangents: Vec<Vec4> = mesh.tangents().map(Vec4::from).collect();
 
-            CpuMesh {
+            let triangles = CpuMesh {
                 positions: Positions::F32(positions),
                 normals: Some(normals),
                 uvs: Some(uvs),
-                material_name: Some(texture.into()),
                 tangents: Some(tangents),
                 ..Default::default()
+            };
+            Primitive {
+                name: "model".into(),
+                geometry: Geometry::Triangles(triangles),
+                transformation: Mat4::identity(),
+                animations: vec![],
+                material_index: skin.texture_index(mesh.material_index()),
             }
         })
         .collect();
@@ -282,6 +295,7 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
         .collect();
 
     CpuModel {
+        name: "model".into(),
         materials,
         geometries,
     }
@@ -289,7 +303,7 @@ fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
 
 fn convert_material(material: MaterialData) -> CpuMaterial {
     CpuMaterial {
-        albedo: Color::new(
+        albedo: Srgba::new(
             material.color[0],
             material.color[1],
             material.color[2],
