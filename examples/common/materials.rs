@@ -83,7 +83,7 @@ pub fn load_material(
 
     let bump_map = material.bump_map().and_then(|path| {
         Some(TextureData {
-            image: load_texture(&path, loader).ok()?,
+            image: load_texture(path, loader).ok()?,
             name: path.into(),
         })
     });
@@ -107,10 +107,10 @@ fn load_texture(name: &str, loader: &Loader) -> Result<DynamicImage, Error> {
         "materials/{}.vtf",
         name.trim_end_matches(".vtf").trim_start_matches('/')
     );
-    let mut raw = loader
+    let raw = loader
         .load(&path)?
         .ok_or(Error::Other(format!("Can't find file {}", path)))?;
-    let vtf = VTF::read(&mut raw)?;
+    let vtf = VTF::read(&raw)?;
     let image = vtf.highres_image.decode(0)?;
     Ok(image)
 }

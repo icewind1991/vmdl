@@ -25,7 +25,7 @@ impl From<&vmdl::vvd::Vertex> for Vertex {
     fn from(vertex: &vmdl::vvd::Vertex) -> Self {
         Vertex {
             position: vertex.position.into(),
-            uv: vertex.texture_coordinates.into(),
+            uv: vertex.texture_coordinates,
             normal: vertex.normal.into(),
         }
     }

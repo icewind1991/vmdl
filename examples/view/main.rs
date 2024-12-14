@@ -115,11 +115,9 @@ fn main() -> Result<(), Error> {
                     );
                     directional[0].intensity = directional_intensity;
                     directional[1].intensity = directional_intensity;
-                    if ui.checkbox(&mut shadows_enabled, "Shadows").clicked() {
-                        if !shadows_enabled {
-                            directional[0].clear_shadow_map();
-                            directional[1].clear_shadow_map();
-                        }
+                    if ui.checkbox(&mut shadows_enabled, "Shadows").clicked() && !shadows_enabled {
+                        directional[0].clear_shadow_map();
+                        directional[1].clear_shadow_map();
                     }
 
                     ui.label("Debug options");
@@ -175,8 +173,10 @@ fn main() -> Result<(), Error> {
                     lights,
                 ),
                 DebugType::DEPTH => {
-                    let mut depth_material = DepthMaterial::default();
-                    depth_material.max_distance = Some(depth_max);
+                    let depth_material = DepthMaterial {
+                        max_distance: Some(depth_max),
+                        ..DepthMaterial::default()
+                    };
                     target.render_with_material(
                         &depth_material,
                         &camera,

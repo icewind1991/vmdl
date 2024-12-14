@@ -214,7 +214,7 @@ struct FrameValues<'a> {
     data: &'a [u8], // data starting at self.header
 }
 
-impl<'a> FrameValues<'a> {
+impl FrameValues<'_> {
     pub fn get(&self, index: u8) -> Result<u16, ModelError> {
         if self.header.total <= index {
             let offset_count = self.header.valid + 1;
@@ -368,12 +368,10 @@ fn read_animation(
     header_offset: usize,
     frames: usize,
 ) -> Result<(Animation, usize), ModelError> {
-    let data = data
-        .get(header_offset..)
-        .ok_or_else(|| ModelError::OutOfBounds {
-            data: "animation data",
-            offset: header_offset,
-        })?;
+    let data = data.get(header_offset..).ok_or(ModelError::OutOfBounds {
+        data: "animation data",
+        offset: header_offset,
+    })?;
     let header = <AnimationHeader as Readable>::read(data)?;
 
     let offset = size_of::<AnimationHeader>();
