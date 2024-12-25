@@ -4,7 +4,42 @@ use crate::{
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use num_enum::TryFromPrimitive;
+use std::fmt::Display;
 use std::mem::size_of;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Zeroable, Pod, Default)]
+#[repr(transparent)]
+pub struct BoneId(u8);
+
+impl From<u8> for BoneId {
+    fn from(val: u8) -> Self {
+        BoneId(val)
+    }
+}
+
+impl From<i32> for BoneId {
+    fn from(val: i32) -> Self {
+        BoneId(u8::try_from(val).unwrap_or(255))
+    }
+}
+
+impl From<usize> for BoneId {
+    fn from(val: usize) -> Self {
+        BoneId(u8::try_from(val).unwrap_or_default())
+    }
+}
+
+impl From<BoneId> for usize {
+    fn from(val: BoneId) -> Self {
+        val.0 as usize
+    }
+}
+
+impl Display for BoneId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
@@ -17,7 +52,7 @@ pub struct BoneHeader {
     pub quaternion: Quaternion,
     pub rot: RadianEuler,
     pub pos_scale: Vector,
-    pub rot_scale: Vector,
+    pub rot_scale: [f32; 3],
 
     pub pose_to_bone: Transform3x4,
     pub q_alignment: Quaternion,
@@ -38,14 +73,14 @@ static_assertions::const_assert_eq!(size_of::<BoneHeader>(), 216);
 #[repr(C)]
 pub struct Bone {
     pub name: String,
-    pub parent: i32,               // parent bone
+    pub parent: BoneId,
     pub bone_controller: [i32; 6], // bone controller index, -1 == none
 
     pub pos: Vector,
     pub quaternion: Quaternion,
     pub rot: RadianEuler,
     pub pos_scale: Vector,
-    pub rot_scale: Vector,
+    pub rot_scale: RadianEuler,
 
     pub pose_to_bone: Transform3x4,
     pub q_alignment: Quaternion,
@@ -93,13 +128,21 @@ impl ReadRelative for Bone {
 
         Ok(Bone {
             name: read_single(data, header.sz_name_index)?,
-            parent: header.parent,
+            parent: header.parent.into(),
             bone_controller: header.bone_controller,
-            pos: header.pos,
+            pos: Vector {
+                x: header.pos.z,
+                y: header.pos.x,
+                z: header.pos.y,
+            },
             quaternion: header.quaternion,
             rot: header.rot,
             pos_scale: header.pos_scale,
-            rot_scale: header.rot_scale,
+            rot_scale: RadianEuler {
+                x: header.rot_scale[2],
+                y: header.rot_scale[0],
+                z: header.rot_scale[1],
+            },
             pose_to_bone: header.pose_to_bone,
             q_alignment: header.q_alignment,
             flags: header.flags,

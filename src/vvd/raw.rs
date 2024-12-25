@@ -1,3 +1,4 @@
+use crate::mdl::BoneId;
 use crate::{index_range, ReadableRelative, Vector};
 use bytemuck::{Pod, Zeroable};
 use std::cmp::min;
@@ -82,22 +83,33 @@ static_assertions::const_assert_eq!(size_of::<Vertex>(), 48);
 #[repr(C)]
 pub struct BoneWeights {
     weight: [f32; 3],
-    bone: [u8; 3],
+    bone: [BoneId; 3],
     bone_count: u8,
 }
 
 impl BoneWeights {
     pub fn weights(&self) -> impl Iterator<Item = BoneWeight> + '_ {
-        (0..min(self.bone_count as usize, 3)).map(|i| BoneWeight {
-            weight: self.weight[i] / self.bone_count as f32,
-            bone_id: self.bone[i],
-        })
+        self.bone
+            .into_iter()
+            .zip(self.weight)
+            .take(min(self.bone_count as usize, 3))
+            .map(|(bone_id, weight)| BoneWeight {
+                bone_id,
+                weight: weight / self.bone_count as f32,
+            })
+    }
+
+    pub fn get_weight(&self, bone_id: BoneId) -> f32 {
+        self.weights()
+            .find(|weight| weight.bone_id == bone_id)
+            .map(|weight| weight.weight)
+            .unwrap_or_default()
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct BoneWeight {
-    pub bone_id: u8,
+    pub bone_id: BoneId,
     pub weight: f32,
 }
 

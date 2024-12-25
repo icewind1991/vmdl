@@ -7,7 +7,9 @@ pub mod vtx;
 pub mod vvd;
 
 pub use crate::mdl::Mdl;
-use crate::mdl::{AnimationDescription, Bone, ModelFlags, PoseParameterDescription, TextureInfo};
+use crate::mdl::{
+    AnimationDescription, Bone, BoneId, ModelFlags, PoseParameterDescription, TextureInfo,
+};
 pub use crate::vtx::Vtx;
 use crate::vvd::Vertex;
 pub use crate::vvd::Vvd;
@@ -134,8 +136,19 @@ impl Model {
         self.mdl.name.as_str()
     }
 
-    pub fn bones(&self) -> impl Iterator<Item = &Bone> {
-        self.mdl.bones.iter()
+    pub fn bones(&self) -> impl Iterator<Item = Handle<Bone, BoneId>> {
+        self.mdl
+            .bones
+            .iter()
+            .enumerate()
+            .map(|(i, bone)| Handle::new(&self.mdl, bone, i.into()))
+    }
+
+    pub fn bone(&self, id: BoneId) -> Option<Handle<Bone, BoneId>> {
+        self.mdl
+            .bones
+            .get(usize::from(id))
+            .map(|bone| Handle::new(&self.mdl, bone, id))
     }
 
     pub fn root_transform(&self) -> Matrix4<f32> {
@@ -157,7 +170,11 @@ impl Model {
         self.mdl
             .local_animations
             .iter()
-            .filter_map(|desc| desc.animations.iter().find(|animation| animation.bone == 0))
+            .filter_map(|desc| {
+                desc.animations
+                    .iter()
+                    .find(|animation| animation.bone == BoneId::default())
+            })
             .next()
             .map(|animation| animation.rotation(0))
             .map(Matrix4::from)
@@ -175,6 +192,38 @@ impl Model {
     pub fn apply_root_transform(&self, vec: Vector) -> Vector {
         let transform = self.idle_transform() * self.root_transform();
         transform.transform_vector(Vector3::from(vec)).into()
+    }
+
+    pub fn apply_animation(
+        &self,
+        animation: &AnimationDescription,
+        vertex: &Vertex,
+        frame: usize,
+    ) -> Vector {
+        let mut position = vertex.position.into();
+        for animation in animation.animations.iter() {
+            if let Some(animated_bone) = self.bone(animation.bone) {
+                let weight: f32 = vertex
+                    .bone_weights
+                    .weights()
+                    .flat_map(|weight| Some((self.bone(weight.bone_id)?, weight)))
+                    .filter(|(bone, _)| bone.is_affected_by(animated_bone.key()))
+                    .map(|(_, weight)| weight.weight)
+                    .sum();
+
+                let pose_to_bone = animated_bone.pos.into();
+
+                let bone_rotation = Matrix4::from(animated_bone.rot);
+                if weight > 0.0 {
+                    position -= pose_to_bone;
+                    let transform = (animation.transform(frame)) * bone_rotation;
+                    position = transform.transform_vector(position);
+                    position += pose_to_bone;
+                }
+            }
+        }
+
+        position.into()
     }
 }
 

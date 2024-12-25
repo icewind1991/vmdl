@@ -6,13 +6,16 @@ mod material;
 use crate::error::Error;
 use crate::material::{load_material_fallback, MaterialData};
 use cgmath::{vec3, Matrix4, SquareMatrix};
+use std::collections::HashMap;
 use std::env::args_os;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use tf_asset_loader::Loader;
 use three_d::{
-    AmbientLight, Camera, ClearState, ColorMaterial, CpuMaterial, CpuMesh, CpuModel, CpuTexture,
-    DepthMaterial, DirectionalLight, FrameOutput, Light, NormalMaterial, ORMMaterial, OrbitControl,
-    PhysicalMaterial, PositionMaterial, UVMaterial, Vec2, Vec4, Window, WindowSettings,
+    AmbientLight, Camera, ClearState, ColorMaterial, Context, CpuMaterial, CpuMesh, CpuModel,
+    CpuTexture, DepthMaterial, DirectionalLight, FrameOutput, Light, NormalMaterial, ORMMaterial,
+    OrbitControl, PhysicalMaterial, PositionMaterial, UVMaterial, Vec2, Vec4, Window,
+    WindowSettings,
 };
 use three_d_asset::{
     degrees, Geometry, Mat4, Positions, Primitive, Srgba, TextureData, Vec3, Viewport,
@@ -64,8 +67,7 @@ fn main() -> Result<(), Error> {
 
     let loader = Loader::new().expect("loader");
     let skin_count = source_model.skin_tables().count();
-
-    let cpu_models = (0..skin_count).map(|skin| model_to_model(&source_model, &loader, skin));
+    let animation_count = source_model.animations().count();
 
     let ph_material = PhysicalMaterial {
         albedo: Srgba {
@@ -76,10 +78,6 @@ fn main() -> Result<(), Error> {
         },
         ..Default::default()
     };
-
-    let models: Vec<three_d::Model<PhysicalMaterial>> = cpu_models
-        .map(|cpu_model| three_d::Model::new(&context, &cpu_model).expect("failed to load model"))
-        .collect();
 
     let mut directional = [
         DirectionalLight::new(&context, 1.0, Srgba::WHITE, vec3(1.0, -1.0, 0.0)),
@@ -98,9 +96,19 @@ fn main() -> Result<(), Error> {
     let mut fov = 60.0;
     let mut debug_type = DebugType::NONE;
     let mut skin_index = 0;
+    let mut animation_index = 0;
+    let mut frame = 0;
+    let mut skip_count = 0;
+    let mut playing = false;
+
+    let model_builder = ModelBuilder::new(source_model, loader);
 
     window.render_loop(move |mut frame_input| {
-        let model = &models[skin_index];
+        let model_key = ModelKey::new(skin_index, animation_index, frame);
+
+        let model = model_builder.get(&context, model_key);
+        let frame_count = model_builder.frame_count(animation_index);
+
         let mut change = frame_input.first_frame;
         let mut panel_width = frame_input.viewport.width;
         change |= gui.update(
@@ -142,6 +150,14 @@ fn main() -> Result<(), Error> {
                     ui.add(Slider::new(&mut depth_max, 1.0..=30.0).text("Depth max"));
                     ui.add(Slider::new(&mut fov, 45.0..=90.0).text("FOV"));
 
+                    ui.label("Animation");
+                    ui.add(
+                        Slider::new(&mut animation_index, 0..=(animation_count - 1))
+                            .text("Animation"),
+                    );
+                    ui.add(Slider::new(&mut frame, 0..=(frame_count - 1)).text("Frame"));
+                    ui.add(Checkbox::new(&mut playing, "Play"));
+
                     ui.label("Position");
                     ui.add(Label::new(format!("\tx: {}", camera.position().x)));
                     ui.add(Label::new(format!("\ty: {}", camera.position().y)));
@@ -150,6 +166,17 @@ fn main() -> Result<(), Error> {
                 panel_width = gui_context.used_size().x as u32;
             },
         );
+        if playing {
+            skip_count += 1;
+            if skip_count > 4 {
+                frame += 1;
+                if frame >= frame_count {
+                    frame = 0;
+                }
+                change = true;
+                skip_count = 0;
+            }
+        }
 
         let viewport = Viewport {
             x: panel_width as i32,
@@ -224,7 +251,7 @@ fn main() -> Result<(), Error> {
                     model.iter().map(|gm| &gm.geometry),
                     lights,
                 ),
-                DebugType::NONE => target.render(&camera, model, lights),
+                DebugType::NONE => target.render(&camera, model.as_ref(), lights),
             }
             .write(|| gui.render())
             .expect("failed to render");
@@ -249,17 +276,28 @@ pub fn map_coords<C: Into<Vec3>>(vec: C) -> Vec3 {
     }
 }
 
-fn model_to_model(model: &Model, loader: &Loader, skin: usize) -> CpuModel {
+fn model_to_model(
+    model: &Model,
+    loader: &Loader,
+    skin: usize,
+    animation: usize,
+    frame: usize,
+) -> CpuModel {
     let skin = model.skin_tables().nth(skin).unwrap();
 
     let transforms = Matrix4::identity();
+
+    let animation = model
+        .animations()
+        .nth(animation)
+        .unwrap_or_else(|| model.animations().next().unwrap());
 
     let geometries = model
         .meshes()
         .map(|mesh| {
             let positions: Vec<Vec3> = mesh
                 .vertices()
-                .map(|vertex| model.apply_root_transform(vertex.position))
+                .map(|vertex| model.apply_animation(animation, vertex, frame))
                 .map(|position| map_coords(position) * 10.0)
                 .map(|vertex: Vec3| (transforms * vertex.extend(1.0)).truncate())
                 .collect();
@@ -346,5 +384,66 @@ fn convert_texture(texture: material::TextureData, keep_alpha: bool) -> CpuTextu
         height,
         width,
         ..CpuTexture::default()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+struct ModelKey {
+    skin: usize,
+    animation: usize,
+    frame: usize,
+}
+
+impl ModelKey {
+    pub fn new(skin: usize, animation: usize, frame: usize) -> Self {
+        ModelKey {
+            skin,
+            animation,
+            frame,
+        }
+    }
+}
+
+pub struct ModelBuilder {
+    source: Model,
+    loader: Loader,
+    cache: Mutex<HashMap<ModelKey, Arc<three_d::Model<PhysicalMaterial>>>>,
+}
+
+impl ModelBuilder {
+    fn new(source: Model, loader: Loader) -> Self {
+        ModelBuilder {
+            source,
+            loader,
+            cache: Mutex::default(),
+        }
+    }
+
+    fn frame_count(&self, animation: usize) -> usize {
+        self.source
+            .animations()
+            .nth(animation)
+            .map(|animation| animation.frame_count)
+            .unwrap_or_default()
+    }
+
+    fn get(&self, context: &Context, key: ModelKey) -> Arc<three_d::Model<PhysicalMaterial>> {
+        self.cache
+            .lock()
+            .unwrap()
+            .entry(key)
+            .or_insert_with(|| {
+                let cpu_model = model_to_model(
+                    &self.source,
+                    &self.loader,
+                    key.skin,
+                    key.animation,
+                    key.frame,
+                );
+                Arc::new(
+                    three_d::Model::new(context, &cpu_model).expect("failed to build gpu model"),
+                )
+            })
+            .clone()
     }
 }

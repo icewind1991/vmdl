@@ -1,12 +1,12 @@
 use crate::compressed_vector::{Quaternion48, Quaternion64, Vector48};
-use crate::mdl::Bone;
+use crate::mdl::{Bone, BoneId};
 use crate::{
     index_range, read_relative, read_single, ModelError, Quaternion, RadianEuler, ReadRelative,
     Readable, ReadableRelative, Vector,
 };
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Matrix4, SquareMatrix};
+use cgmath::Matrix4;
 use std::mem::size_of;
 
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
@@ -89,16 +89,6 @@ pub struct AnimationDescription {
     pub animations: Vec<Animation>,
 }
 
-impl AnimationDescription {
-    pub fn get_bone_transform(&self, bone: u8, frame: usize) -> Matrix4<f32> {
-        let Some(animation) = self.animations.iter().find(|anim| anim.bone == bone) else {
-            return Matrix4::identity();
-        };
-        Matrix4::from_translation(animation.position(frame).into())
-            * Matrix4::from(animation.rotation(frame))
-    }
-}
-
 impl ReadRelative for AnimationDescription {
     type Header = AnimationDescriptionHeader;
 
@@ -139,7 +129,7 @@ impl ReadableRelative for AnimationBlock {}
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct AnimationHeader {
-    bone: u8,
+    bone: BoneId,
     flags: AnimationFlags,
     next_offset: u16,
 }
@@ -215,7 +205,7 @@ struct FrameValues<'a> {
 }
 
 impl FrameValues<'_> {
-    pub fn get(&self, index: u8) -> Result<u16, ModelError> {
+    pub fn get(&self, index: u8) -> Result<i16, ModelError> {
         if self.header.total <= index {
             let offset_count = self.header.valid + 1;
             let offset = (offset_count as usize) * size_of::<u16>();
@@ -292,14 +282,25 @@ impl RotationData {
         }
     }
 
-    fn set_scale(&mut self, scale: Vector) {
+    fn set_scale(&mut self, scale: RadianEuler) {
         if let RotationData::Animated(values) = self {
             values.iter_mut().for_each(|value| {
-                // scale and fixup the angles
                 *value = RadianEuler {
-                    y: value.x * scale.x,
-                    z: value.y * scale.y,
-                    x: value.z * scale.z,
+                    x: value.x * scale.x,
+                    y: value.y * scale.y,
+                    z: value.z * scale.z,
+                }
+            });
+        }
+    }
+
+    fn set_base_rotation(&mut self, base: RadianEuler) {
+        if let RotationData::Animated(values) = self {
+            values.iter_mut().for_each(|value| {
+                *value = RadianEuler {
+                    x: value.x + base.x,
+                    y: value.y + base.y,
+                    z: value.z + base.z,
                 }
             });
         }
@@ -338,7 +339,7 @@ impl PositionData {
 /// Per bone animation data
 #[derive(Clone, Debug)]
 pub struct Animation {
-    pub bone: u8,
+    pub bone: BoneId,
     pub flags: AnimationFlags,
     rotation_data: RotationData,
     position_data: PositionData,
@@ -353,8 +354,15 @@ impl Animation {
         self.position_data.position(frame)
     }
 
-    pub(crate) fn set_scales(&mut self, bone: &Bone) {
+    pub fn transform(&self, frame: usize) -> Matrix4<f32> {
+        Matrix4::from_translation(self.position(frame).into()) * Matrix4::from(self.rotation(frame))
+    }
+
+    pub(crate) fn apply_bone_data(&mut self, bone: &Bone) {
         self.rotation_data.set_scale(bone.rot_scale);
+        if self.flags.contains(AnimationFlags::STUDIO_ANIM_DELTA) {
+            self.rotation_data.set_base_rotation(bone.rot);
+        }
         self.position_data.set_scale(bone.pos_scale);
     }
 }
@@ -381,7 +389,7 @@ fn read_animation(
         let value_data = &data[offset..];
         let values: Vec<RadianEuler> = (0..frames)
             .map(|frame| read_animation_values(value_data, frame, pointers))
-            .map(|r| r.map(|[x, y, z]| RadianEuler { x, z, y }))
+            .map(|r| r.map(|[y, z, x]| RadianEuler { x, z, y }))
             .collect::<Result<_, ModelError>>()?;
         RotationData::from(values)
     } else {

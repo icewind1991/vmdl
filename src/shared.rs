@@ -129,7 +129,7 @@ impl From<cgmath::Quaternion<f32>> for Quaternion {
     }
 }
 
-impl From<Quaternion> for cgmath::Matrix4<f32> {
+impl From<Quaternion> for Matrix4<f32> {
     fn from(q: Quaternion) -> Self {
         // cgmath::Quaternion::from(Quaternion {
         //     x: q.z,
@@ -237,6 +237,18 @@ impl From<RadianEuler> for Quaternion {
 impl From<RadianEuler> for Matrix4<f32> {
     fn from(value: RadianEuler) -> Self {
         cgmath::Quaternion::from(value).into()
+    }
+}
+
+impl Mul<f32> for RadianEuler {
+    type Output = RadianEuler;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        RadianEuler {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+        }
     }
 }
 

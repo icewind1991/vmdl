@@ -73,8 +73,8 @@ impl Mdl {
             .iter_mut()
             .flat_map(|desc| desc.animations.iter_mut())
             .for_each(|animation| {
-                if let Some(bone) = bones.get(animation.bone as usize) {
-                    animation.set_scales(bone);
+                if let Some(bone) = bones.get(usize::from(animation.bone)) {
+                    animation.apply_bone_data(bone);
                 }
             });
         let animation_block_source: String = read_single(data, header.anim_blocks_name_index)?;
