@@ -349,10 +349,6 @@ impl Animation {
         self.rotation_data.rotation(frame)
     }
 
-    pub(crate) fn rotation_looks_valid(&self) -> bool {
-        true
-    }
-
     pub fn position(&self, frame: usize) -> Vector {
         self.position_data.position(frame)
     }

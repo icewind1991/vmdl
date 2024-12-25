@@ -158,7 +158,7 @@ impl Model {
             .local_animations
             .iter()
             .filter_map(|desc| desc.animations.iter().find(|animation| animation.bone == 0))
-            .find(|anim| anim.rotation_looks_valid())
+            .next()
             .map(|animation| animation.rotation(0))
             .map(Matrix4::from)
             .unwrap_or_else(Matrix4::identity)
