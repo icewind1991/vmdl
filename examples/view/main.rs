@@ -5,7 +5,7 @@ mod material;
 
 use crate::error::Error;
 use crate::material::{load_material_fallback, MaterialData};
-use cgmath::{vec3, Matrix4, SquareMatrix};
+use cgmath::{vec3, Matrix4, SquareMatrix, Vector3};
 use std::collections::HashMap;
 use std::env::args_os;
 use std::path::PathBuf;
@@ -52,17 +52,20 @@ fn main() -> Result<(), Error> {
     .unwrap();
     let context = window.gl();
 
+    let (bb_min, bb_max) = source_model.bounding_box();
+    let bb_center = Vector3::from(map_coords((bb_min + bb_max) * 0.5));
+
     let mut camera = Camera::new_perspective(
         window.viewport(),
-        vec3(2.0, 2.0, 2.0),
-        vec3(0.0, 0.0, 0.0),
+        vec3(0.5, 0.5, 0.5),
+        bb_center,
         vec3(0.0, 1.0, 0.0),
         degrees(90.0),
-        0.01,
+        0.001,
         300.0,
     );
 
-    let mut control = OrbitControl::new(camera.target(), 1.0, 100.0);
+    let mut control = OrbitControl::new(camera.target(), 0.1, 10.0);
     let mut gui = three_d::GUI::new(&context);
 
     let loader = Loader::new().expect("loader");
@@ -298,7 +301,7 @@ fn model_to_model(
             let positions: Vec<Vec3> = mesh
                 .vertices()
                 .map(|vertex| model.apply_animation(animation, vertex, frame))
-                .map(|position| map_coords(position) * 10.0)
+                .map(|position| map_coords(position))
                 .map(|vertex: Vec3| (transforms * vertex.extend(1.0)).truncate())
                 .collect();
             let normals: Vec<Vec3> = mesh.vertices().map(|vertex| vertex.normal.into()).collect();
