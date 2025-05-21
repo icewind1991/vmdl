@@ -1,3 +1,5 @@
+# Moved to https://codeberg.org/icewind/vmdl
+
 # VMDL
 
 Rust parser for source engine model files (`.mdl`, `.vtx`, `.vvd`)
